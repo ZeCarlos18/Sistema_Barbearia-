@@ -28,26 +28,6 @@ Principais funcionalidades:
 - **Banco de dados**: MySQL
 - **Ferramentas**: npm, nodemon, CORS, dotenv
 
-## 📁 Estrutura do Projeto
-
-```
-Sistema_Barbearia/
-├── frontend/                    # Aplicação React
-│   ├── src/                     # Código fonte React
-│   ├── public/                  # Arquivos públicos
-│   ├── package.json             # Dependências React
-│   └── node_modules/            # Módulos instalados
-├── backend/                     # API Node.js + Express
-│   ├── src/
-│   │   └── index.js             # Arquivo principal
-│   ├── .env.example             # Exemplo de variáveis
-│   ├── package.json             # Dependências Node
-│   └── node_modules/            # Módulos instalados
-├── docs/                        # Documentação
-└── README.md
-```
-
----
 
 ## 🚀 Guia de Instalação (Passo a Passo)
 
@@ -137,104 +117,63 @@ cp .env.example .env
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
-DB_PASSWORD=sua_senha_mysql
+DB_PASSWORD=
 DB_NAME=barbearia_db
 NODE_ENV=development
 PORT=3001
+JWT_SECRET=your-secret-key
 ```
 
-**Substitua `sua_senha_mysql` pela senha do seu MySQL!**
+**Nota**: Se seu MySQL tem senha, adicione em `DB_PASSWORD`
 
 ---
 
-### 🗄️ Passo 5: Configure o Banco de Dados (MySQL)
+### 🗄️ Passo 5: Inicializar o Banco de Dados
 
-1. Abra o **MySQL Workbench** ou use a linha de comando:
+⚠️ **IMPORTANTE**: Execute este comando para criar automaticamente o banco de dados e as tabelas necessárias:
 
 ```bash
-mysql -u root -p
+npm run setup
 ```
 
-2. Crie o banco de dados:
-```sql
-CREATE DATABASE barbearia_db;
-USE barbearia_db;
+Você verá:
+```
+🔧 Inicializando banco de dados...
+✅ Conectado ao MySQL
+✅ Banco de dados criado/verificado: barbearia_db
+✅ Tabela "users" criada/verificada
+✅ Setup do banco de dados concluído!
+
+🎉 Banco pronto! Agora você pode rodar: npm run dev
 ```
 
-3. Crie as tabelas necessárias (exemplo básico):
-```sql
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE appointments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  barber_id INT NOT NULL,
-  appointment_date DATETIME NOT NULL,
-  status VARCHAR(50) DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (barber_id) REFERENCES users(id)
-);
-```
+**Este comando executa uma única vez e cria automaticamente:**
+- ✅ Banco de dados `barbearia_db`
+- ✅ Tabela `users` com todos os campos necessários
+- ✅ Índices de performance
+- ✅ Constraints de segurança
 
 ---
 
 ## ▶️ Como Executar o Projeto
 
-Você precisará de **2 terminais abertos** simultaneamente:
+### 🚀 Passo a Passo Rápido:
 
-### Terminal 1 - Iniciar o Backend:
+#### 1️⃣ Iniciar o MySQL do XAMPP
+
+1. Abra **XAMPP Control Panel**
+2. Clique em **Start** ao lado de MySQL
+3. Aguarde ficar **VERDE** ✅
+
+Espere a mensagem: `🎉 Banco pronto! Agora você pode rodar: npm run dev`
+
+#### 3️⃣ Iniciar o Backend
 
 ```bash
-cd backend
 npm run dev
 ```
 
-Você deve ver:
-```
-Servidor rodando na porta 3001
-```
 
-A API estará disponível em: `http://localhost:3001`
-
----
-
-### Terminal 2 - Iniciar o Frontend:
-
-```bash
-cd frontend
-npm start
-```
-
-O navegador abrirá automaticamente em: `http://localhost:3000`
-
----
-
-## 🧪 Testando a Instalação
-
-### Verificar se o Backend está funcionando:
-
-Abra seu navegador ou use `curl`:
-```bash
-curl http://localhost:3001
-```
-
-Você deve receber:
-```json
-{ "message": "API Barbearia funcionando!" }
-```
-
-### Verificar se o Frontend está acessível:
-
-Acesse: `http://localhost:3000`
-
-Você deve ver a aplicação React carregada.
 
 ---
 
@@ -243,66 +182,22 @@ Você deve ver a aplicação React carregada.
 ### Backend (`backend/`)
 
 ```bash
+npm run setup      # 🔧 Cria o banco de dados e tabelas (execute uma única vez!)
+npm run dev        # 🚀 Inicia com nodemon (recarreguamento automático)
 npm start          # Inicia o servidor em produção
-npm run dev        # Inicia com nodemon (recarreguamento automático)
 npm test           # Executar testes (quando implementados)
 ```
 
 ### Frontend (`frontend/`)
 
-```bash
-npm start          # Inicia o servidor React de desenvolvimento
-npm run build      # Cria uma build otimizada para produção
-npm test           # Executa os testes
-npm run eject      # Ejetar configuração (⚠️ irreversível!)
-```
+O frontend atual é um arquivo **HTML estático simples** para testes. Você pode:
+- Abrir diretamente no navegador: `file:///...frontend/index.html`
+- Usar Live Server do VS Code
+- Servir com um servidor HTTP simples
 
----
+Para o frontend React completo, veja a pasta `frontend/` (em desenvolvimento)
 
-## 🐛 Troubleshooting
 
-### Problema: "Port 3001 já está em uso"
-
-**Solução**: Mude a porta no arquivo `.env` do backend:
-```env
-PORT=3002
-```
-
-### Problema: "MySQL connection refused"
-
-**Solução**: Verifique se:
-- MySQL está rodando
-- Credenciais no `.env` estão corretas
-- Banco de dados `barbearia_db` foi criado
-
-### Problema: "node_modules não encontrado"
-
-**Solução**: Execute novamente:
-```bash
-npm install
-```
-
-### Problema: "npm command not found"
-
-**Solução**: Node.js não está instalado. [Baixe e instale aqui](https://nodejs.org/)
-
----
-
-## 📚 Documentação Adicional
-
-Consulte a pasta `docs/` para:
-- Arquitetura completa
-- Documentação do banco de dados
-- Endpoints da API
-- Guia de contribuição
-
----
-
-## 📞 Suporte
-
-Para dúvidas ou problemas, entre em contato com a equipe ou abra uma issue no repositório.
-
-**Última atualização**: Abril, 2026
 
 ## 📄 Documentos Importantes
 

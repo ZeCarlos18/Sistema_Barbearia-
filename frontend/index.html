@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Barbearia - Autenticação</title>
+</head>
+<body>
+    <!-- ===== TELA DE LOGIN ===== -->
+    <div id="loginPage">
+        <h1>Sistema de Barbearia</h1>
+        <h2>Login</h2>
+
+        <form id="loginForm">
+            <div>
+                <label for="loginEmail">Email:</label>
+                <br>
+                <input type="email" id="loginEmail" required>
+            </div>
+            <br>
+
+            <div>
+                <label for="loginPassword">Senha:</label>
+                <br>
+                <input type="password" id="loginPassword" required>
+            </div>
+            <br>
+
+            <button type="submit">Entrar</button>
+            <br><br>
+            <button type="button" onclick="goToRegister()">Criar Conta</button>
+        </form>
+
+        <p id="loginError"></p>
+        <p id="loginMessage"></p>
+    </div>
+
+    <!-- ===== TELA DE CADASTRO ===== -->
+    <div id="registerPage" style="display: none;">
+        <h1>Sistema de Barbearia</h1>
+        <h2>Criar Conta</h2>
+
+        <form id="registerForm">
+            <div>
+                <label for="registerName">Nome:</label>
+                <br>
+                <input type="text" id="registerName" required>
+            </div>
+            <br>
+
+            <div>
+                <label for="registerEmail">Email:</label>
+                <br>
+                <input type="email" id="registerEmail" required>
+            </div>
+            <br>
+
+            <div>
+                <label for="registerPassword">Senha:</label>
+                <br>
+                <input type="password" id="registerPassword" required>
+            </div>
+            <br>
+
+            <button type="submit">Cadastrar</button>
+            <br><br>
+            <button type="button" onclick="goToLogin()">Voltar para Login</button>
+        </form>
+
+        <p id="registerError"></p>
+        <p id="registerMessage"></p>
+    </div>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="dashboardPage" style="display: none;">
+        <h1>Sistema de Barbearia</h1>
+        <h2>Bem-vindo!</h2>
+
+        <p>Usuário: <strong id="userNameDisplay">-</strong></p>
+        <p>Email: <strong id="userEmailDisplay">-</strong></p>
+
+        <br>
+        <button onclick="logout()">Logout</button>
+
+        <p id="logoutMessage"></p>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api/auth';
+
+        // ===== NAVEGAÇÃO ENTRE TELAS =====
+        function goToLogin() {
+            document.getElementById('loginPage').style.display = 'block';
+            document.getElementById('registerPage').style.display = 'none';
+            document.getElementById('dashboardPage').style.display = 'none';
+            limparMensagens();
+        }
+
+        function goToRegister() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('registerPage').style.display = 'block';
+            document.getElementById('dashboardPage').style.display = 'none';
+            limparMensagens();
+        }
+
+        function goToDashboard(userName, userEmail) {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('registerPage').style.display = 'none';
+            document.getElementById('dashboardPage').style.display = 'block';
+            document.getElementById('userNameDisplay').textContent = userName;
+            document.getElementById('userEmailDisplay').textContent = userEmail;
+            limparMensagens();
+        }
+
+        // ===== LIMPAR MENSAGENS =====
+        function limparMensagens() {
+            document.getElementById('loginError').textContent = '';
+            document.getElementById('loginMessage').textContent = '';
+            document.getElementById('registerError').textContent = '';
+            document.getElementById('registerMessage').textContent = '';
+            document.getElementById('logoutMessage').textContent = '';
+        }
+
+        // ===== OBTER DADOS DO TOKEN =====
+        function getUserFromToken() {
+            const token = localStorage.getItem('token');
+            if (!token) return null;
+
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                return {
+                    id: payload.id,
+                    name: payload.name,
+                    email: payload.email
+                };
+            } catch {
+                return null;
+            }
+        }
+
+        // ===== VERIFICAR SE JÁ ESTÁ LOGADO =====
+        function checkAuth() {
+            const user = getUserFromToken();
+            if (user) {
+                goToDashboard(user.name, user.email);
+            }
+        }
+
+        // ===== CADASTRO (RF01) =====
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('registerMessage').textContent = `✓ ${data.message}! Redirecionando para login...`;
+                    document.getElementById('registerError').textContent = '';
+                    document.getElementById('registerForm').reset();
+
+                    setTimeout(() => {
+                        goToLogin();
+                    }, 2000);
+                } else {
+                    document.getElementById('registerError').textContent = `✗ ${data.message}`;
+                    document.getElementById('registerMessage').textContent = '';
+                }
+            } catch (error) {
+                document.getElementById('registerError').textContent = `✗ Erro: ${error.message}`;
+                document.getElementById('registerMessage').textContent = '';
+            }
+        });
+
+        // ===== LOGIN (RF02) =====
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Salvar token
+                    localStorage.setItem('token', data.token);
+                    document.getElementById('loginMessage').textContent = `✓ ${data.message}! Redirecionando...`;
+                    document.getElementById('loginError').textContent = '';
+                    document.getElementById('loginForm').reset();
+
+                    setTimeout(() => {
+                        goToDashboard(data.user.name, data.user.email);
+                    }, 1500);
+                } else {
+                    document.getElementById('loginError').textContent = `✗ ${data.message}`;
+                    document.getElementById('loginMessage').textContent = '';
+                }
+            } catch (error) {
+                document.getElementById('loginError').textContent = `✗ Erro: ${error.message}`;
+                document.getElementById('loginMessage').textContent = '';
+            }
+        });
+
+        // ===== LOGOUT (RF13) =====
+        async function logout() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('logoutMessage').textContent = '✗ Erro: Token não encontrado';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.removeItem('token');
+                    document.getElementById('logoutMessage').textContent = `✓ ${data.message}! Redirecionando...`;
+
+                    setTimeout(() => {
+                        goToLogin();
+                    }, 1500);
+                } else {
+                    document.getElementById('logoutMessage').textContent = `✗ ${data.message}`;
+                }
+            } catch (error) {
+                document.getElementById('logoutMessage').textContent = `✗ Erro: ${error.message}`;
+            }
+        }
+
+        // Verificar autenticação ao carregar
+        checkAuth();
+    </script>
+</body>
+</html>
