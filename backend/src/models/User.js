@@ -110,6 +110,26 @@ class User {
       connection.release();
     }
   }
+
+  /**
+   * Buscar usuários por role
+   * @param {String} role - Role do usuário (barber, client, admin)
+   * @returns {Array} Lista de usuários com a role especificada
+   */
+  static async findByRole(role) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [users] = await connection.query(
+        'SELECT id, name, email, phone, role, created_at FROM users WHERE role = ?',
+        [role]
+      );
+      
+      return users;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = User;

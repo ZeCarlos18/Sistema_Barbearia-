@@ -44,6 +44,44 @@ async function setupDatabase() {
     `);
     console.log('✅ Tabela "users" criada/verificada');
 
+    // Criar tabela de serviços
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS services (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(10, 2) NOT NULL,
+        duration INT NOT NULL COMMENT 'Duração em minutos',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_name (name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ Tabela "services" criada/verificada');
+
+    // Criar tabela de agendamentos
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        barber_id INT NOT NULL,
+        service_id INT NOT NULL,
+        date DATE NOT NULL,
+        time TIME NOT NULL,
+        status ENUM('pending', 'confirmed', 'completed', 'cancelled') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_date (date),
+        INDEX idx_barber (barber_id),
+        INDEX idx_user (user_id),
+        INDEX idx_date_barber (date, barber_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (barber_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ Tabela "appointments" criada/verificada');
+
     await connection.end();
     console.log('✅ Setup do banco de dados concluído!\n');
     

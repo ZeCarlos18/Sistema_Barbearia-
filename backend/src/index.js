@@ -4,6 +4,10 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const db = require('./database');
 const authRoutes = require('./routes/authRoutes');
+const serviceRoutes = require('./routes/serviceRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const userRoutes = require('./routes/userRoutes');
+const availableTimesRoutes = require('./routes/availableTimesRoutes');
 
 const app = express();
 
@@ -37,6 +41,18 @@ app.get('/api/test-db', async (req, res) => {
 
 // Rotas de Autenticação
 app.use('/api/auth', authRoutes);
+
+// Rotas de Serviços
+app.use('/api/services', serviceRoutes);
+
+// Rotas de Agendamentos
+app.use('/api/appointments', appointmentRoutes);
+
+// Rotas de Usuários
+app.use('/api/users', userRoutes);
+
+// Rotas de Horários Disponíveis
+app.use('/api/available-times', availableTimesRoutes);
 
 // Rota 404
 app.use((req, res) => {
