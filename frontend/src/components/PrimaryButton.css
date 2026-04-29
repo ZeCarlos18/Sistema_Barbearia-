@@ -1,0 +1,10 @@
+.primary-btn{
+  background:#E3B800; /* amarelo */
+  border:none;
+  color:#111;
+  padding:12px 28px;
+  border-radius:999px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 4px 8px rgba(0,0,0,0.2);
+}
