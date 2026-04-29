@@ -8,7 +8,7 @@ class User {
    * @returns {Object} Dados do usuário criado
    */
   static async create(userData) {
-    const { email, password, name } = userData;
+    const { email, password, name, phone = null } = userData;
     
     const connection = await pool.getConnection();
     
@@ -28,8 +28,8 @@ class User {
       
       // Inserir novo usuário
       const [result] = await connection.query(
-        'INSERT INTO users (name, email, password, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
-        [name, email, hashedPassword]
+        'INSERT INTO users (name, email, password, phone, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
+        [name, email, hashedPassword, phone]
       );
       
       return {

@@ -1,0 +1,42 @@
+.text-field{
+  display:block;
+  width:100%;
+}
+
+.text-field__label{
+  display:block;
+  margin-bottom:8px;
+  color:#f3f0e8;
+  font-size:0.72rem;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+
+.text-field__input{
+  width:100%;
+  box-sizing:border-box;
+  background:#181818;
+  color:#f8f2e1;
+  border:1px solid rgba(212, 175, 55, 0.55);
+  border-radius:12px;
+  padding:14px 16px;
+  font-size:1rem;
+  outline:none;
+}
+
+.text-field__input:focus{
+  border-color:#d4af37;
+  box-shadow:0 0 0 3px rgba(212, 175, 55, 0.16);
+}
+
+.text-field__input--error{
+  border-color:#ef6b6b;
+}
+
+.text-field__error{
+  display:block;
+  margin-top:6px;
+  color:#ff9b9b;
+  font-size:0.82rem;
+}

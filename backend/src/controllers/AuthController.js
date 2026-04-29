@@ -17,7 +17,7 @@ class AuthController {
    */
   static async register(req, res) {
     try {
-      const { name, email, password } = req.body;
+      const { name, email, password, phone } = req.body;
 
       // Validar campos obrigatórios
       if (!name || !email || !password) {
@@ -40,7 +40,8 @@ class AuthController {
       const newUser = await User.create({
         name,
         email,
-        password
+        password,
+        phone
       });
 
       return res.status(201).json({

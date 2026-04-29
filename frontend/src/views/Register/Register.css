@@ -1,0 +1,109 @@
+.register-page{
+  min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#222;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+.register-card{
+  width:min(390px, 100%);
+  border-radius:34px;
+  background:#0d0d0d;
+  color:#f7f2e6;
+  overflow:hidden;
+  box-shadow:0 18px 50px rgba(0,0,0,0.5);
+}
+
+.register-header{
+  padding:34px 26px 22px;
+  text-align:center;
+}
+
+.register-title{
+  margin:0;
+  font-family:serif;
+  font-size:2rem;
+  letter-spacing:0.08em;
+}
+
+.register-subtitle{
+  margin:10px 0 0;
+  color:rgba(247, 242, 230, 0.78);
+  font-size:0.78rem;
+  letter-spacing:0.14em;
+}
+
+.register-divider{
+  height:1px;
+  background:rgba(212, 175, 55, 0.55);
+}
+
+.register-form{
+  display:grid;
+  gap:16px;
+  padding:28px 26px 30px;
+}
+
+.register-copy{
+  margin-bottom:4px;
+}
+
+.register-form-title{
+  margin:0 0 8px;
+  font-size:1.18rem;
+  letter-spacing:0.04em;
+}
+
+.register-form-text{
+  margin:0;
+  color:rgba(247, 242, 230, 0.78);
+}
+
+.register-message{
+  border-radius:12px;
+  padding:12px 14px;
+  font-size:0.92rem;
+}
+
+.register-message--error{
+  background:rgba(255, 107, 107, 0.12);
+  color:#ffb1b1;
+  border:1px solid rgba(255, 107, 107, 0.35);
+}
+
+.register-message--success{
+  background:rgba(80, 190, 120, 0.12);
+  color:#b8f0c8;
+  border:1px solid rgba(80, 190, 120, 0.35);
+}
+
+.register-back{
+  border:none;
+  background:transparent;
+  color:#d4af37;
+  font-size:0.95rem;
+  cursor:pointer;
+  padding:8px 0 0;
+}
+
+@media (max-width: 480px){
+  .register-page{
+    padding:12px;
+  }
+
+  .register-card{
+    border-radius:28px;
+  }
+
+  .register-header{
+    padding:28px 18px 20px;
+  }
+
+  .register-form{
+    padding:22px 18px 24px;
+  }
+}
