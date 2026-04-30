@@ -3,7 +3,7 @@ import TextField from '../../components/form/TextField';
 import { login } from '../../services/authService';
 import './Login.css';
 
-export default function Login({ onLoginSuccess, onGoToRegister }) {
+export default function Login({ onLoginSuccess, onGoToRegister, onGoToRecover }) {
   const [form, setForm] = React.useState({ email: '', password: '', remember: true });
   const [errors, setErrors] = React.useState({});
   const [loading, setLoading] = React.useState(false);
@@ -123,6 +123,10 @@ export default function Login({ onLoginSuccess, onGoToRegister }) {
 
           <button type="button" className="login-link" onClick={onGoToRegister}>
             Não tem uma conta? <span>Cadastrar-se</span>
+          </button>
+
+          <button type="button" className="login-recover" onClick={onGoToRecover}>
+            Recuperar senha
           </button>
         </form>
       </section>
