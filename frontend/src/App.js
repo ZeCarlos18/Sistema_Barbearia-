@@ -4,6 +4,7 @@ import Register from './views/Register/Register';
 import Login from './views/Login/Login';
 import Home from './views/Home/Home';
 import RecoverPassword from './views/RecoverPassword/RecoverPassword';
+import Booking from './views/Booking/Booking';
 
 function App() {
   const [screen, setScreen] = React.useState('welcome');
@@ -20,10 +21,15 @@ function App() {
   const handleRecover = () => setScreen('recover');
   const handleBack = () => setScreen('welcome');
   const handleLogout = () => setScreen('welcome');
+  const handleStartBooking = () => setScreen('booking');
   const handleLoginSuccess = () => setScreen('home');
 
   if (screen === 'home') {
-    return <Home onLogout={handleLogout} />;
+    return <Home onLogout={handleLogout} onStartBooking={handleStartBooking} />;
+  }
+
+  if (screen === 'booking') {
+    return <Booking onBack={() => setScreen('home')} />;
   }
 
   if (screen === 'register') {
