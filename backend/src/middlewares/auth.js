@@ -22,6 +22,7 @@ const authenticate = (req, res, next) => {
     // Adicionar dados do usuário à requisição
     req.userId = decoded.id;
     req.userEmail = decoded.email;
+    req.userRole = decoded.role;
     
     next();
   } catch (error) {
@@ -90,8 +91,20 @@ const validatePassword = (req, res, next) => {
   next();
 };
 
+const requireAdmin = (req, res, next) => {
+  if (req.userRole !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Acesso negado: apenas administradores podem executar esta ação'
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   authenticate,
+  requireAdmin,
   validateRequiredFields,
   validateEmail,
   validatePassword

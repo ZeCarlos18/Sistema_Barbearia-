@@ -7,6 +7,7 @@ const authRoutes = require('./routes/authRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const userRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const availableTimesRoutes = require('./routes/availableTimesRoutes');
 
 const app = express();
@@ -51,6 +52,9 @@ app.use('/api/appointments', appointmentRoutes);
 // Rotas de Usuários
 app.use('/api/users', userRoutes);
 
+// Rotas de Administração
+app.use('/api/admin', adminRoutes);
+
 // Rotas de Horários Disponíveis
 app.use('/api/available-times', availableTimesRoutes);
 
@@ -79,9 +83,13 @@ app.listen(PORT, () => {
   console.log(`📝 Teste a conexão: http://localhost:${PORT}/api/test-db`);
   console.log(`🔐 API de Autenticação: http://localhost:${PORT}/api/auth`);
   console.log(`\n📚 Endpoints disponíveis:`);
-  console.log(`  POST   /api/auth/register - Cadastro de usuário`);
-  console.log(`  POST   /api/auth/login    - Login`);
-  console.log(`  POST   /api/auth/logout   - Logout (requer autenticação)`);
-  console.log(`  GET    /api/auth/profile  - Perfil do usuário (requer autenticação)`);
-  console.log(`  GET    /api/auth/users    - Listar todos os usuários`);
+  console.log(`  POST   /api/auth/register     - Cadastro de usuário`);
+  console.log(`  POST   /api/auth/login        - Login`);
+  console.log(`  POST   /api/auth/logout       - Logout (requer autenticação)`);
+  console.log(`  GET    /api/auth/profile      - Perfil do usuário (requer autenticação)`);
+  console.log(`  GET    /api/auth/users        - Listar todos os usuários`);
+  console.log(`  POST   /api/admin/barbers     - Criar barbeiro (requer autenticação)`);
+  console.log(`  GET    /api/admin/barbers     - Listar barbeiros (requer autenticação)`);
+  console.log(`  GET    /api/admin/barbers/:id - Detalhes barbeiro (requer autenticação)`);
+  console.log(`  DELETE /api/admin/barbers/:id - Excluir barbeiro (requer autenticação)`);
 });

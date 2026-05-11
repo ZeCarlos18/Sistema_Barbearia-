@@ -103,7 +103,8 @@ class AuthController {
         {
           id: user.id,
           email: user.email,
-          name: user.name
+          name: user.name,
+          role: user.role
         },
         process.env.JWT_SECRET || 'your-secret-key',
         {
@@ -119,7 +120,8 @@ class AuthController {
         user: {
           id: user.id,
           name: user.name,
-          email: user.email
+          email: user.email,
+          role: user.role
         },
         redirectUrl: '/dashboard'
       });

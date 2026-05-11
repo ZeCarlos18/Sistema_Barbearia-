@@ -4,11 +4,11 @@ const bcryptjs = require('bcryptjs');
 class User {
   /**
    * Criar novo usuário no banco de dados
-   * @param {Object} userData - Dados do usuário {email, password, name}
+   * @param {Object} userData - Dados do usuário {email, password, name, phone, role}
    * @returns {Object} Dados do usuário criado
    */
   static async create(userData) {
-    const { email, password, name, phone = null } = userData;
+    const { email, password, name, phone = null, role = 'client' } = userData;
     
     const connection = await pool.getConnection();
     
@@ -28,8 +28,8 @@ class User {
       
       // Inserir novo usuário
       const [result] = await connection.query(
-        'INSERT INTO users (name, email, password, phone, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
-        [name, email, hashedPassword, phone]
+        'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+        [name, email, hashedPassword, phone, role]
       );
       
       return {
@@ -53,7 +53,7 @@ class User {
     
     try {
       const [users] = await connection.query(
-        'SELECT id, name, email, password FROM users WHERE email = ?',
+        'SELECT id, name, email, password, role FROM users WHERE email = ?',
         [email]
       );
       
@@ -73,7 +73,7 @@ class User {
     
     try {
       const [users] = await connection.query(
-        'SELECT id, name, email, created_at FROM users WHERE id = ?',
+        'SELECT id, name, email, phone, role, created_at FROM users WHERE id = ?',
         [id]
       );
       
@@ -237,6 +237,26 @@ class User {
       );
       
       return users.length > 0 ? users[0] : null;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Excluir usuário por ID
+   * @param {Number} id - ID do usuário
+   * @returns {Boolean} True se excluído, false se não encontrado
+   */
+  static async delete(id) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [result] = await connection.query(
+        'DELETE FROM users WHERE id = ?',
+        [id]
+      );
+      
+      return result.affectedRows > 0;
     } finally {
       connection.release();
     }
