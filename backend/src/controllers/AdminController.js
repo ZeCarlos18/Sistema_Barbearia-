@@ -14,42 +14,102 @@ class AdminController {
       const { name, email, password, phone } = req.body;
 
       // Validar campos obrigatórios
-      if (!name || !email || !password) {
+      if (!name || !name.trim()) {
         return res.status(400).json({
           success: false,
-          message: 'Nome, email e senha são obrigatórios'
+          message: 'O campo nome é obrigatório e não pode estar em branco'
         });
       }
 
-      // Validar email único
-      const existingUser = await User.findByEmail(email);
-      if (existingUser) {
+      if (!email || !email.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'O campo email é obrigatório'
+        });
+      }
+
+      if (!phone || !phone.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'O campo telefone é obrigatório'
+        });
+      }
+
+      // Validar nome apenas letras e espaços
+      const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ ]+$/;
+      if (!nameRegex.test(name.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nome inválido: apenas letras e espaços são permitidos'
+        });
+      }
+
+      // Validar email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Formato de email inválido'
+        });
+      }
+
+      // Normalizar telefone
+      const formattedPhone = phone.replace(/\D/g, '');
+      const phoneRegex = /^\d{10,11}$/;
+      if (!phoneRegex.test(formattedPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Telefone inválido: deve conter DDD e apenas números (10 ou 11 dígitos)'
+        });
+      }
+
+      // Validar email duplicado
+      const existingByEmail = await User.findByEmail(email.trim().toLowerCase());
+      if (existingByEmail) {
         return res.status(409).json({
           success: false,
           message: 'Este email já está registrado no sistema'
         });
       }
 
+      // Validar telefone duplicado
+      const existingByPhone = await User.findByPhone(formattedPhone);
+      if (existingByPhone) {
+        return res.status(409).json({
+          success: false,
+          message: 'Este telefone já está registrado no sistema'
+        });
+      }
+
+      // Gerar senha temporária caso não seja informada
+      const randomPassword = password && password.trim() ? password : AdminController.generateTemporaryPassword();
+
       // Criar barbeiro com role 'barber'
       const newBarber = await User.create({
-        name,
-        email,
-        password,
-        phone,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: randomPassword,
+        phone: formattedPhone,
         role: 'barber'
       });
 
-      return res.status(201).json({
+      const responsePayload = {
         success: true,
         message: 'Barbeiro criado com sucesso',
         barber: {
           id: newBarber.id,
           name: newBarber.name,
           email: newBarber.email,
-          phone: newBarber.phone,
+          phone: formattedPhone,
           role: 'barber'
         }
-      });
+      };
+
+      if (!password || !password.trim()) {
+        responsePayload.generatedPassword = randomPassword;
+      }
+
+      return res.status(201).json(responsePayload);
     } catch (error) {
       console.error('Erro ao criar barbeiro:', error);
 
@@ -66,6 +126,28 @@ class AdminController {
         error: error.message
       });
     }
+  }
+
+  static generateTemporaryPassword() {
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const digits = '0123456789';
+    const specials = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    const all = upper + lower + digits + specials;
+
+    const getRandom = (chars) => chars[Math.floor(Math.random() * chars.length)];
+
+    let password = '';
+    password += getRandom(upper);
+    password += getRandom(lower);
+    password += getRandom(digits);
+    password += getRandom(specials);
+
+    for (let i = 4; i < 10; i += 1) {
+      password += getRandom(all);
+    }
+
+    return password;
   }
 
   /**

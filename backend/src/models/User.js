@@ -132,6 +132,26 @@ class User {
   }
 
   /**
+   * Buscar usuário por telefone
+   * @param {String} phone - Telefone do usuário
+   * @returns {Object} Dados do usuário ou null
+   */
+  static async findByPhone(phone) {
+    const connection = await pool.getConnection();
+
+    try {
+      const [users] = await connection.query(
+        'SELECT id, name, email, phone FROM users WHERE phone = ?',
+        [phone]
+      );
+
+      return users.length > 0 ? users[0] : null;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
    * Atualizar dados do usuário
    * @param {Number} id - ID do usuário
    * @param {Object} updateData - Dados para atualizar {name, email, phone, password}

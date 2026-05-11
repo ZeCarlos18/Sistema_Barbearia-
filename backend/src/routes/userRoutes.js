@@ -23,33 +23,6 @@ router.get('/barbers', async (req, res) => {
   }
 });
 
-// Buscar usuário por ID
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await User.findById(id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuário não encontrado'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    console.error('Erro ao buscar usuário:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar usuário',
-      error: error.message
-    });
-  }
-});
-
 /**
  * Rota para obter perfil do usuário autenticado
  */
@@ -77,5 +50,32 @@ router.put('/profile',
   authenticate,
   UserController.updateProfile
 );
+
+// Buscar usuário por ID
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuário não encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Erro ao buscar usuário:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar usuário',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;
