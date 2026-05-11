@@ -157,20 +157,44 @@ Você verá:
 
 ## ▶️ Como Executar o Projeto
 
-### 🚀 Passo a Passo Rápido:
+### 🚀 Inicialização Rápida (Recomendado)
 
-#### 1️⃣ Iniciar o MySQL do XAMPP
+#### Pré-requisitos antes de começar:
+1. **MySQL rodando** - Abra XAMPP Control Panel e inicie o MySQL
+2. **Banco configurado** - Execute uma vez (se não fez ainda):
+   ```bash
+   cd backend
+   npm run setup
+   ```
 
-1. Abra **XAMPP Control Panel**
-2. Clique em **Start** ao lado de MySQL
-3. Aguarde ficar **VERDE** ✅
+#### Inicie o Sistema Inteiro com Um Comando:
 
-Espere a mensagem: `🎉 Banco pronto! Agora você pode rodar: npm run dev`
-
-#### 3️⃣ Iniciar o Backend
+Da **raiz do projeto**, execute:
 
 ```bash
+npm start
+```
+
+✨ **Pronto!** Isso iniciará automaticamente:
+- 🔙 **Backend** na porta `3001` (com auto-reload)
+- 🎨 **Frontend** na porta `3000`
+
+Ambos rodam em **dois terminais separados** simultaneamente.
+
+---
+
+### 🚀 Alternativa: Iniciar Manualmente (Se Preferir)
+
+#### Terminal 1 - Backend:
+```bash
+cd backend
 npm run dev
+```
+
+#### Terminal 2 - Frontend (em novo terminal):
+```bash
+cd frontend
+npm start
 ```
 
 
@@ -179,23 +203,32 @@ npm run dev
 
 ## 📝 Scripts Disponíveis
 
+### Raiz do Projeto (`/`)
+
+```bash
+npm start           # 🚀 Inicia backend e frontend simultaneamente
+npm run dev         # 🚀 Mesmo que npm start
+npm run dev:backend # Inicia apenas o backend
+npm run dev:frontend # Inicia apenas o frontend
+npm run install:all # Instala dependências em backend e frontend
+```
+
 ### Backend (`backend/`)
 
 ```bash
 npm run setup      # 🔧 Cria o banco de dados e tabelas (execute uma única vez!)
-npm run dev        # 🚀 Inicia com nodemon (recarreguamento automático)
+npm run dev        # 🚀 Inicia com nodemon (recarregamento automático)
 npm start          # Inicia o servidor em produção
 npm test           # Executar testes (quando implementados)
 ```
 
 ### Frontend (`frontend/`)
 
-O frontend atual é um arquivo **HTML estático simples** para testes. Você pode:
-- Abrir diretamente no navegador: `file:///...frontend/index.html`
-- Usar Live Server do VS Code
-- Servir com um servidor HTTP simples
-
-Para o frontend React completo, veja a pasta `frontend/` (em desenvolvimento)
+```bash
+npm start          # 🚀 Inicia servidor de desenvolvimento (porta 3000)
+npm run build      # 📦 Cria build otimizado para produção
+npm test           # Executar testes
+```
 
 
 
