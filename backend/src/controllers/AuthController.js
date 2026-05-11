@@ -7,13 +7,7 @@ const jwt = require('jsonwebtoken');
  */
 class AuthController {
   /**
-   * RF01 - Cadastro de Usuário
    * Permitir que novos usuários cadastrem um e-mail no sistema
-   * 
-   * Regras de Negócio:
-   * - Validar campos obrigatórios
-   * - Validar e-mail único
-   * - Salvar usuário no banco
    */
   static async register(req, res) {
     try {
@@ -72,14 +66,7 @@ class AuthController {
   }
 
   /**
-   * RF02 - Login
    * Permitir que usuários cadastrados acessem o sistema com e-mail e senha
-   * 
-   * Regras de Negócio:
-   * - Validar campos obrigatórios
-   * - Verificar e-mail e senha
-   * - Criar sessão do usuário (JWT)
-   * - Redirecionar para dashboard
    */
   static async login(req, res) {
     try {
@@ -147,14 +134,7 @@ class AuthController {
   }
 
   /**
-   * RF13 - Fazer Logout
    * Permitir que o usuário encerre sua sessão de forma segura
-   * 
-   * Regras de Negócio:
-   * - O sistema deve encerrar completamente a sessão do usuário
-   * - O token deve ser invalidado
-   * - Nenhuma informação sensível deve permanecer em memória
-   * - O usuário é redirecionado para a tela de login
    */
   static async logout(req, res) {
     try {

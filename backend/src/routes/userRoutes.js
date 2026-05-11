@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const UserController = require('../controllers/UserController');
+const { authenticate } = require('../middlewares/auth');
 
 // Buscar todos os barbeiros
 router.get('/barbers', async (req, res) => {
@@ -47,5 +49,33 @@ router.get('/:id', async (req, res) => {
     });
   }
 });
+
+/**
+ * Rota para obter perfil do usuário autenticado
+ */
+router.get('/profile',
+  authenticate,
+  UserController.getProfile
+);
+
+/**
+ * Rota para atualizar perfil do usuário
+ *
+ * Headers requeridos:
+ * Authorization: Bearer JWT_TOKEN
+ *
+ * Body esperado (campos opcionais):
+ * {
+ *   "name": "Novo Nome",
+ *   "email": "novoemail@example.com",
+ *   "phone": "11999999999",
+ *   "oldPassword": "senhaAntiga", // obrigatório se newPassword fornecido
+ *   "newPassword": "NovaSenha123!"
+ * }
+ */
+router.put('/profile',
+  authenticate,
+  UserController.updateProfile
+);
 
 module.exports = router;

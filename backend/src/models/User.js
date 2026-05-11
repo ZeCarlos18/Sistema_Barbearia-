@@ -130,6 +130,117 @@ class User {
       connection.release();
     }
   }
+
+  /**
+   * Atualizar dados do usuário
+   * @param {Number} id - ID do usuário
+   * @param {Object} updateData - Dados para atualizar {name, email, phone, password}
+   * @returns {Object} Dados atualizados do usuário
+   */
+  static async update(id, updateData) {
+    const { name, email, phone, password } = updateData;
+    
+    const connection = await pool.getConnection();
+    
+    try {
+      // Verificar se o usuário existe
+      const [existingUser] = await connection.query(
+        'SELECT id, name, email, phone FROM users WHERE id = ?',
+        [id]
+      );
+      
+      if (existingUser.length === 0) {
+        throw new Error('USER_NOT_FOUND');
+      }
+      
+      // Verificar duplicatas para email e phone, excluindo o próprio usuário
+      if (email) {
+        const [emailCheck] = await connection.query(
+          'SELECT id FROM users WHERE email = ? AND id != ?',
+          [email, id]
+        );
+        if (emailCheck.length > 0) {
+          throw new Error('EMAIL_ALREADY_EXISTS');
+        }
+      }
+      
+      if (phone) {
+        const [phoneCheck] = await connection.query(
+          'SELECT id FROM users WHERE phone = ? AND id != ?',
+          [phone, id]
+        );
+        if (phoneCheck.length > 0) {
+          throw new Error('PHONE_ALREADY_EXISTS');
+        }
+      }
+      
+      // Preparar query de update
+      let updateFields = [];
+      let updateValues = [];
+      
+      if (name !== undefined) {
+        updateFields.push('name = ?');
+        updateValues.push(name);
+      }
+      
+      if (email !== undefined) {
+        updateFields.push('email = ?');
+        updateValues.push(email);
+      }
+      
+      if (phone !== undefined) {
+        updateFields.push('phone = ?');
+        updateValues.push(phone);
+      }
+      
+      if (password) {
+        const hashedPassword = await bcryptjs.hash(password, 10);
+        updateFields.push('password = ?');
+        updateValues.push(hashedPassword);
+      }
+      
+      if (updateFields.length === 0) {
+        throw new Error('NO_FIELDS_TO_UPDATE');
+      }
+      
+      updateFields.push('updated_at = NOW()');
+      updateValues.push(id);
+      
+      const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`;
+      
+      await connection.query(query, updateValues);
+      
+      // Retornar dados atualizados
+      const [updatedUser] = await connection.query(
+        'SELECT id, name, email, phone, updated_at FROM users WHERE id = ?',
+        [id]
+      );
+      
+      return updatedUser[0];
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Buscar usuário completo por ID (incluindo password para verificação)
+   * @param {Number} id - ID do usuário
+   * @returns {Object} Dados completos do usuário
+   */
+  static async findByIdWithPassword(id) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [users] = await connection.query(
+        'SELECT id, name, email, password, phone FROM users WHERE id = ?',
+        [id]
+      );
+      
+      return users.length > 0 ? users[0] : null;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = User;
