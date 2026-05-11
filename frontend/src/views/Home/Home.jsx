@@ -1,25 +1,34 @@
 import React from 'react';
-import { logout } from '../../services/authService';
 import './Home.css';
+import banner from '../../assets/image.png';
+import BottomNav from '../../components/BottomNav/BottomNav';
+import { FiTrash2 } from 'react-icons/fi';
 
-export default function Home({ onLogout, onStartBooking }) {
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
+const nextAppointment = {
+  status: 'Confirmado',
+  service: 'Corte Degradê',
+  barber: 'Rafael',
+  date: 'Seg, 18 de Maio',
+  time: '14:30'
+};
 
+export default function Home({ onStartBooking }) {
   const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user') || '{}';
   const user = JSON.parse(storedUser);
+  const [isCancelModalOpen, setIsCancelModalOpen] = React.useState(false);
+  const [appointmentCanceled, setAppointmentCanceled] = React.useState(false);
 
-  async function handleLogout() {
-    setLoading(true);
-    setError('');
+  function openCancelModal() {
+    setIsCancelModalOpen(true);
+  }
 
-    try {
-      await logout();
-      onLogout();
-    } catch (err) {
-      setError(err.message || 'Erro ao fazer logout');
-      setLoading(false);
-    }
+  function closeCancelModal() {
+    setIsCancelModalOpen(false);
+  }
+
+  function confirmCancelAppointment() {
+    setAppointmentCanceled(true);
+    setIsCancelModalOpen(false);
   }
 
   return (
@@ -27,30 +36,107 @@ export default function Home({ onLogout, onStartBooking }) {
       <div className="home-phone">
         <div className="home-shell">
           <header className="home-header">
-            <div className="home-header-content">
-              <h1 className="home-title">BARBER PRO</h1>
-              <p className="home-welcome">Bem-vindo, {user.name || 'Cliente'}</p>
+            <div className="home-profile">
+              <div className="home-avatar" aria-hidden="true" />
+              <div className="home-greeting">
+                <span>Bem-vindo</span>
+                <strong>{user.name || 'João'}</strong>
+              </div>
             </div>
-            <button className="home-logout-btn" onClick={handleLogout} disabled={loading}>
-              {loading ? 'SAINDO...' : 'SAIR'}
+
+            <button className="home-notification-btn" type="button" aria-label="Notificações">
+              🔔
             </button>
           </header>
 
           <main className="home-main">
-            <section className="home-hero">
-              <div className="home-hero-glow" aria-hidden="true" />
-              <div className="home-card">
-                <div className="home-card-badge">Area do Cliente</div>
-                <h2 className="home-card-title">Seu estilo, seu horario.</h2>
-                <p className="home-card-text">Agende seus servicos e acompanhe seus horarios.</p>
-                <button className="home-booking-btn" type="button" onClick={onStartBooking}>
-                  NOVO AGENDAMENTO
+            <section className="home-section">
+              <h2 className="home-section-title">Seu próximo corte</h2>
+
+              {!appointmentCanceled ? (
+                <article className="appointment-card">
+                  <button
+                    type="button"
+                    className="appointment-delete"
+                    onClick={openCancelModal}
+                    aria-label="Cancelar agendamento"
+                  >
+                    <FiTrash2 size={18} />
+                  </button>
+
+                  <div className="appointment-badge">
+                    <span className="appointment-dot" />
+                    {nextAppointment.status}
+                  </div>
+
+                  <div className="appointment-grid">
+                    <div>
+                      <h3>{nextAppointment.service}</h3>
+                      <p>{nextAppointment.barber}</p>
+                    </div>
+
+                    <div className="appointment-time">
+                      <span>{nextAppointment.date}</span>
+                      <strong>{nextAppointment.time}</strong>
+                    </div>
+                  </div>
+                </article>
+              ) : (
+                <div className="appointment-empty">
+                  Você não possui agendamentos ativos no momento.
+                </div>
+              )}
+            </section>
+
+            <section className="home-section">
+              <h2 className="home-section-title">Ainda não agendou seu horário?</h2>
+
+              <div className="booking-card" style={{ backgroundImage: `url(${banner})` }}>
+                <button className="booking-button" type="button" onClick={onStartBooking}>
+                  Agendar corte <span>→</span>
                 </button>
               </div>
             </section>
-
-            {error ? <div className="home-error">{error}</div> : null}
           </main>
+
+          <BottomNav active="home" onNavigate={(page) => console.log(page)} />
+
+          {isCancelModalOpen ? (
+            <div className="cancel-modal-overlay" onClick={closeCancelModal}>
+              <div
+                className="cancel-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cancel-modal-title"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="cancel-modal-icon" aria-hidden="true">
+                  <FiTrash2 size={18} />
+                </div>
+
+                <h3 id="cancel-modal-title">Cancelar agendamento?</h3>
+                <p>Tem certeza que deseja cancelar seu horário de corte?</p>
+
+                <div className="cancel-modal-actions">
+                  <button
+                    type="button"
+                    className="cancel-modal-btn cancel-modal-btn--ghost"
+                    onClick={closeCancelModal}
+                  >
+                    Voltar
+                  </button>
+
+                  <button
+                    type="button"
+                    className="cancel-modal-btn cancel-modal-btn--danger"
+                    onClick={confirmCancelAppointment}
+                  >
+                    Sim, cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

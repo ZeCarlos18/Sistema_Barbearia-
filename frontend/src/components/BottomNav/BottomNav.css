@@ -1,0 +1,34 @@
+.bottom-nav {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  margin: 0 12px 12px;
+  background: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 22px;
+}
+
+.bottom-nav__item {
+  flex: 1;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: #dddddd;
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.bottom-nav__item.is-active {
+  background: #d4af37;
+  color: #111111;
+}
+
+.bottom-nav__item span {
+  font-size: 0.7rem;
+  font-weight: 700;
+}

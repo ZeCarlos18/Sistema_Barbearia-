@@ -197,6 +197,9 @@ O frontend atual é um arquivo **HTML estático simples** para testes. Você pod
 
 Para o frontend React completo, veja a pasta `frontend/` (em desenvolvimento)
 
+- Comando para rodar o Frontend: npm start dev
+- Instalar a biblioteca de ícones: npm install react-icons
+
 
 
 ## 📄 Documentos Importantes
