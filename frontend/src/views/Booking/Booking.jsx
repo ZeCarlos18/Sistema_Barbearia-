@@ -4,7 +4,8 @@ import avatarImage from '../../assets/image.png';
 import {
   fetchServices,
   fetchBarbers,
-  fetchAvailableTimes
+  fetchAvailableTimes,
+  createAppointment
 } from '../../services/bookingService';
 
 const fallbackServices = [
@@ -124,6 +125,10 @@ export default function Booking({ onBack }) {
     alternatives: false
   });
   const [error, setError] = React.useState('');
+
+  const [confirming, setConfirming] = React.useState(false);
+  const [successMessage, setSuccessMessage] = React.useState('');
+  const [formError, setFormError] = React.useState('');
 
   const today = React.useMemo(() => startOfDay(new Date()), []);
 
@@ -289,12 +294,13 @@ export default function Booking({ onBack }) {
     };
   }, [
     step,
-    filteredAvailableTimes,
+    // depend only on lengths/primitives to avoid reference churn
+    filteredAvailableTimes.length,
     selectedBarberId,
     selectedDate,
-    barberOptions,
+    barbers.length,
     hasRealBarbers,
-    visibleSlotSet
+    visibleSlots.length
   ]);
 
   function handleBack() {
@@ -348,6 +354,56 @@ export default function Booking({ onBack }) {
       setError(requestError.message || 'Nao foi possivel carregar os horarios.');
     } finally {
       setLoading((current) => ({ ...current, times: false }));
+    }
+  }
+
+  // handler para confirmar e salvar agendamento
+  async function handleConfirmBooking() {
+    if (!selectedServiceId || !selectedBarberId || !selectedTime || !selectedDate) {
+      setFormError('Selecione serviço, barbeiro, data e horário antes de continuar.');
+      return;
+    }
+
+    setFormError('');
+    setConfirming(true);
+    setSuccessMessage('');
+
+    try {
+      // obter userId do storage (o backend espera userId no body)
+      const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user') || '{}';
+      const user = JSON.parse(storedUser);
+      const userId = user?.id;
+
+      if (!userId) {
+        throw new Error('Usuário não autenticado. Faça login antes de agendar.');
+      }
+
+      const serviceIdNum = Number(selectedServiceId);
+      if (Number.isNaN(serviceIdNum)) {
+        throw new Error('Serviço inválido. Selecione um serviço cadastrado.');
+      }
+
+      const payload = {
+        userId,
+        barberId: Number(selectedBarberId),
+        serviceId: serviceIdNum,
+        date: formatDateISO(selectedDate), // YYYY-MM-DD
+        time: selectedTime // HH:MM
+      };
+
+      await createAppointment(payload);
+
+      setSuccessMessage('Agendamento realizado com sucesso!');
+      // limpar estado e voltar ao início
+      setSelectedServiceId('');
+      setSelectedBarberId('');
+      setSelectedTime('');
+      setAvailableTimes([]);
+      setStep(0);
+    } catch (err) {
+      setFormError(err.message || 'Erro ao salvar agendamento.');
+    } finally {
+      setConfirming(false);
     }
   }
 
@@ -741,6 +797,25 @@ export default function Booking({ onBack }) {
                       )}
                     </>
                   )}
+                  {/* confirmação do agendamento */}
+                  {filteredAvailableTimes.length > 0 ? (
+                    <div className="booking-confirm">
+                      {formError ? <div className="booking-error">{formError}</div> : null}
+                      {successMessage ? (
+                        <div className="booking-success">{successMessage}</div>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        className="booking-cta"
+                        onClick={handleConfirmBooking}
+                        disabled={!selectedTime || confirming}
+                      >
+                        {confirming ? 'ENVIANDO...' : 'CONTINUAR'}
+                        <span className="booking-cta-arrow" aria-hidden="true" />
+                      </button>
+                    </div>
+                  ) : null}
                 </section>
               )}
 

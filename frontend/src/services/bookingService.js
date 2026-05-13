@@ -42,3 +42,24 @@ export async function fetchAvailableTimes(barberId, date) {
   const payload = await request(`/api/available-times?barberId=${barberId}&date=${date}`);
   return payload.data || { availableTimes: [] };
 }
+
+export async function createAppointment(appointmentData) {
+  const token = getToken();
+
+  const response = await fetch(`${API_BASE_URL}/api/appointments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(appointmentData)
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.message || 'Erro ao criar agendamento');
+  }
+
+  return payload.data;
+}
