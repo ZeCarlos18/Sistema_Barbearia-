@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const AppointmentController = require('../controllers/AppointmentController');
+const { authenticate } = require('../middlewares/auth');
 
 // Rotas para agendamentos
 router.post('/', AppointmentController.create);
 router.get('/', AppointmentController.findAll);
-router.get('/my', AppointmentController.findMyAppointments);
+router.get('/my', authenticate, AppointmentController.findMyAppointments);
 router.get('/barber/:barberId', AppointmentController.findByBarber);
 router.get('/date/:date', AppointmentController.findByDate);
 router.get('/available-times/:barberId', AppointmentController.getAvailableTimes);

@@ -12,7 +12,7 @@ const nextAppointment = {
   time: '14:30'
 };
 
-export default function Home({ onStartBooking }) {
+export default function Home({ onStartBooking, onNavigate }) {
   const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user') || '{}';
   const user = JSON.parse(storedUser);
   const [isCancelModalOpen, setIsCancelModalOpen] = React.useState(false);
@@ -99,7 +99,7 @@ export default function Home({ onStartBooking }) {
             </section>
           </main>
 
-          <BottomNav active="home" onNavigate={(page) => console.log(page)} />
+          <BottomNav active="home" onNavigate={onNavigate} />
 
           {isCancelModalOpen ? (
             <div className="cancel-modal-overlay" onClick={closeCancelModal}>

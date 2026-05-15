@@ -105,7 +105,7 @@ class AppointmentController {
    */
   static async findMyAppointments(req, res) {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       
       if (!userId) {
         return res.status(401).json({

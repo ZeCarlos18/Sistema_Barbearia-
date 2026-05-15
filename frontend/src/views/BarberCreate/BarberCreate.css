@@ -1,0 +1,217 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Manrope:wght@300;400;600;700&display=swap');
+
+.barber-create-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: linear-gradient(160deg, #151515 0%, #080808 100%);
+  color: #f7f2e6;
+  font-family: 'Manrope', sans-serif;
+}
+
+.barber-create-phone {
+  width: min(360px, 100%);
+  aspect-ratio: 9 / 16;
+}
+
+.barber-create-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0b0b0b;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.barber-create-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 8px;
+}
+
+.barber-create-back {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  background: transparent;
+  color: #d4af37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.barber-create-title {
+  margin: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.barber-create-main {
+  flex: 1;
+  padding: 6px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.barber-create-main::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.barber-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.barber-photo-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.6);
+  background: #111111;
+  color: #d4af37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.barber-photo-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(247, 242, 230, 0.7);
+}
+
+.barber-form {
+  display: grid;
+  gap: 14px;
+}
+
+.barber-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.barber-field label,
+.barber-time-card span {
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(247, 242, 230, 0.65);
+}
+
+.barber-input {
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: #0f0f0f;
+  color: #f7f2e6;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.barber-days {
+  display: flex;
+  gap: 8px;
+}
+
+.barber-day {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: #101010;
+  color: #d9d9d9;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.barber-day.is-active {
+  background: #d4af37;
+  color: #111111;
+  border-color: #d4af37;
+}
+
+.barber-time-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.barber-time-card {
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: #0f0f0f;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.barber-time-input {
+  border: none;
+  background: transparent;
+  color: #f7f2e6;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.barber-submit {
+  margin-top: 6px;
+  border: none;
+  background: #d4af37;
+  color: #111111;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.barber-submit:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.barber-feedback {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.barber-feedback--success {
+  background: rgba(80, 190, 120, 0.12);
+  color: #b8f0c8;
+  border: 1px solid rgba(80, 190, 120, 0.35);
+}
+
+.barber-feedback--error {
+  background: rgba(255, 92, 92, 0.12);
+  color: #ffb3b3;
+  border: 1px solid rgba(255, 92, 92, 0.35);
+}
+
+@media (max-width: 480px) {
+  .barber-create-page {
+    padding: 12px;
+  }
+
+  .barber-create-shell {
+    border-radius: 28px;
+  }
+}
