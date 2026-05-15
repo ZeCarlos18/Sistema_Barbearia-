@@ -8,12 +8,6 @@ import {
   createAppointment
 } from '../../services/bookingService';
 
-const fallbackServices = [
-  { id: 'barba', name: 'Barba', price: 15, duration: 30 },
-  { id: 'degrade', name: 'Degrade', price: 18, duration: 40 },
-  { id: 'social', name: 'Social', price: 20, duration: 45 }
-];
-
 const fallbackBarbers = [
   { id: 1, name: 'Rafael' },
   { id: 2, name: 'Lucas' },
@@ -185,7 +179,7 @@ export default function Booking({ onBack }) {
     setAlternativeBarberId('');
   }, [selectedBarberId, selectedDate]);
 
-  const serviceOptions = services.length > 0 ? services : fallbackServices;
+  const serviceOptions = services;
   const barberOptions = barbers.length > 0 ? barbers : fallbackBarbers;
 
   const stageTitle = ['ESCOLHER SERVICO', 'ESCOLHER BARBEIRO', 'ESCOLHER DATA', 'ESCOLHER HORARIO'][
@@ -445,6 +439,10 @@ export default function Booking({ onBack }) {
 
                   {loading.services ? (
                     <div className="booking-loader">Carregando servicos...</div>
+                  ) : serviceOptions.length === 0 ? (
+                    <div className="booking-error">
+                      Nenhum serviço disponível. Contate o administrador.
+                    </div>
                   ) : (
                     <div className="service-grid">
                       {serviceOptions.map((service, index) => {

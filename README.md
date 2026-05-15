@@ -128,32 +128,42 @@ JWT_SECRET=your-secret-key
 
 ---
 
-### 🗄️ Passo 5: Inicializar o Banco de Dados
-
-⚠️ **IMPORTANTE**: Execute este comando para criar automaticamente o banco de dados e as tabelas necessárias:
-
+### Backend
 ```bash
-npm run setup
+cd backend
+npm install
+node src/setup.js    # Cria as tabelas
+npm run seed         # Popula com dados de teste
+npm start            # Servidor na porta 3001
 ```
 
-Você verá:
+### Frontend
+```bash
+cd frontend
+npm install
+npm start            # App na porta 3000
 ```
-🔧 Inicializando banco de dados...
-✅ Conectado ao MySQL
-✅ Banco de dados criado/verificado: barbearia_db
-✅ Tabela "users" criada/verificada
-✅ Setup do banco de dados concluído!
-
-🎉 Banco pronto! Agora você pode rodar: npm run dev
-```
-
-**Este comando executa uma única vez e cria automaticamente:**
-- ✅ Banco de dados `barbearia_db`
-- ✅ Tabela `users` com todos os campos necessários
-- ✅ Índices de performance
-- ✅ Constraints de segurança
 
 ---
+
+## 📦 Dependências
+
+- **Node.js** 14+
+- **MySQL/MariaDB** (XAMPP)
+- **npm** ou **yarn**
+
+---
+
+## 🔐 Credenciais de Teste
+
+| Tipo | Email | Senha |
+|------|-------|-------|
+| Barbeiro | lucas@barber.com | password123 |
+| Barbeiro | felipe@barber.com | password123 |
+| Barbeiro | rafael@barber.com | password123 |
+| Cliente | teste2@test.com | password123 |
+| Cliente | cliente@test.com | password123 |
+
 
 ## ▶️ Como Executar o Projeto
 
@@ -166,22 +176,6 @@ Você verá:
    cd backend
    npm run setup
    ```
-
-#### Inicie o Sistema Inteiro com Um Comando:
-
-Da **raiz do projeto**, execute:
-
-```bash
-npm start
-```
-
-✨ **Pronto!** Isso iniciará automaticamente:
-- 🔙 **Backend** na porta `3001` (com auto-reload)
-- 🎨 **Frontend** na porta `3000`
-
-Ambos rodam em **dois terminais separados** simultaneamente.
-
----
 
 ### 🚀 Alternativa: Iniciar Manualmente (Se Preferir)
 

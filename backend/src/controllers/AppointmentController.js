@@ -25,6 +25,15 @@ class AppointmentController {
         });
       }
 
+      // Verificar se o usuário já tem um agendamento ativo
+      const activeAppointments = await Appointment.findActiveByUserId(userId);
+      if (activeAppointments.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Você já possui um agendamento ativo. Cancele o agendamento anterior antes de fazer um novo.'
+        });
+      }
+
       // Verificar se o horário já está ocupado
       const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
       if (occupiedTimes.includes(time)) {
@@ -262,12 +271,18 @@ class AppointmentController {
 
   /**
    * Cancelar agendamento
+   * Segue as regras de negócio RF10:
+   * - O agendamento deve estar com status 'confirmado'
+   * - Deve validar prazo mínimo de 24 horas antes do agendamento
+   * - Atualiza o status para 'cancelado'
+   * - O horário fica automaticamente disponível para novos agendamentos
    */
   static async cancel(req, res) {
     try {
       const { id } = req.params;
-      const appointment = await Appointment.cancel(id);
-
+      
+      // Buscar o agendamento
+      const appointment = await Appointment.findById(id);
       if (!appointment) {
         return res.status(404).json({
           success: false,
@@ -275,16 +290,109 @@ class AppointmentController {
         });
       }
 
+      // Validar se o agendamento está confirmado
+      if (appointment.status !== 'confirmed') {
+        return res.status(409).json({
+          success: false,
+          message: 'Apenas agendamentos confirmados podem ser cancelados'
+        });
+      }
+
+      // Validar prazo mínimo de 24 horas
+      const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+      const now = new Date();
+      const hoursUntilAppointment = (appointmentDateTime - now) / (1000 * 60 * 60);
+
+      if (hoursUntilAppointment < 24) {
+        return res.status(409).json({
+          success: false,
+          message: 'Não é possível cancelar com menos de 24 horas de antecedência'
+        });
+      }
+
+      // Atualizar status para cancelado
+      const canceledAppointment = await Appointment.updateStatus(id, 'cancelled');
+
       res.json({
         success: true,
         message: 'Agendamento cancelado com sucesso',
-        data: appointment
+        data: canceledAppointment
       });
     } catch (error) {
       console.error('Erro ao cancelar agendamento:', error);
       res.status(500).json({
         success: false,
         message: 'Erro ao cancelar agendamento',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Confirmar agendamento
+   * Segue as regras de negócio RF08:
+   * - O agendamento deve estar com status 'pending'
+   * - O horário deve estar disponível (nenhum outro agendamento no mesmo horário para o mesmo barbeiro)
+   * - O cliente não pode ter dois agendamentos no mesmo horário
+   */
+  static async confirm(req, res) {
+    try {
+      const { id } = req.params;
+
+      // Buscar agendamento
+      const appointment = await Appointment.findById(id);
+      if (!appointment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Agendamento não encontrado'
+        });
+      }
+
+      // Validar se está com status 'pending'
+      if (appointment.status !== 'pending') {
+        return res.status(409).json({
+          success: false,
+          message: `Agendamento não pode ser confirmado. Status atual: ${appointment.status}`
+        });
+      }
+
+      // Validar se o horário ainda está disponível para o barbeiro
+      const occupiedTimes = await Appointment.getOccupiedTimes(appointment.barber_id, appointment.date);
+      if (occupiedTimes.includes(appointment.time)) {
+        return res.status(409).json({
+          success: false,
+          message: 'Horário já não está mais disponível para este barbeiro'
+        });
+      }
+
+      // Validar se o cliente não tem outro agendamento no mesmo horário
+      const userAppointmentsOnDate = await Appointment.findByUserAndDate(
+        appointment.user_id,
+        appointment.date
+      );
+      const conflictingAppointment = userAppointmentsOnDate.find(
+        (apt) => apt.time === appointment.time && Number(apt.id) !== Number(id) && apt.status !== 'cancelled'
+      );
+      if (conflictingAppointment) {
+        return res.status(409).json({
+          success: false,
+          message: 'Cliente já possui outro agendamento neste horário'
+        });
+      }
+
+      // Confirmar agendamento
+      const confirmedAppointment = await Appointment.updateStatus(id, 'confirmed');
+
+      res.json({
+        success: true,
+        message: 'Agendamento confirmado com sucesso',
+        data: confirmedAppointment
+      });
+    } catch (error) {
+      console.error('Erro ao confirmar agendamento:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao confirmar agendamento',
         error: error.message
       });
     }

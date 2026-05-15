@@ -11,6 +11,7 @@ router.get('/barber/:barberId', AppointmentController.findByBarber);
 router.get('/date/:date', AppointmentController.findByDate);
 router.get('/available-times/:barberId', AppointmentController.getAvailableTimes);
 router.get('/:id', AppointmentController.findById);
+router.post('/:id/confirm', AppointmentController.confirm);
 router.put('/:id/status', AppointmentController.updateStatus);
 router.put('/:id/cancel', AppointmentController.cancel);
 router.delete('/:id', AppointmentController.delete);

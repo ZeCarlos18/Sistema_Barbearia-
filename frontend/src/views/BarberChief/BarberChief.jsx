@@ -1,6 +1,6 @@
 import React from 'react';
 import { FiBell, FiCalendar, FiHome, FiLogOut, FiPlus, FiUser } from 'react-icons/fi';
-import { fetchAppointmentsByDate } from '../../services/dashboardService';
+import { fetchAppointmentsByDate, confirmAppointment } from '../../services/dashboardService';
 import { fetchServices } from '../../services/bookingService';
 import './BarberChief.css';
 
@@ -20,7 +20,14 @@ function getStoredUser() {
 export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
   const user = getStoredUser();
   const displayName = user.name || 'Lucas';
+  const barberId = user.id;
   const [activeNav, setActiveNav] = React.useState('home');
+  const [selectedDate, setSelectedDate] = React.useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+      today.getDate()
+    ).padStart(2, '0')}`;
+  });
   const [metrics, setMetrics] = React.useState({
     appointments: 0,
     profit: 0,
@@ -28,35 +35,37 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
   });
   const [agendaItems, setAgendaItems] = React.useState([]);
   const [status, setStatus] = React.useState({ loading: false, error: '' });
+  const [confirmingId, setConfirmingId] = React.useState(null);
 
   React.useEffect(() => {
     let isMounted = true;
-    const today = new Date();
-    const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-      today.getDate()
-    ).padStart(2, '0')}`;
 
     async function loadDashboard() {
       setStatus({ loading: true, error: '' });
       try {
         const [appointments, services] = await Promise.all([
-          fetchAppointmentsByDate(date),
+          fetchAppointmentsByDate(selectedDate),
           fetchServices()
         ]);
 
         if (!isMounted) return;
 
+        // Filtrar apenas agendamentos do barbeiro logado
+        const barberAppointments = Array.isArray(appointments)
+          ? appointments.filter(apt => apt.barber_id === barberId)
+          : [];
+
         const serviceMap = new Map(
           services.map((service) => [String(service.id), Number(service.price) || 0])
         );
 
-        const activeAppointments = appointments.filter(
+        const activeAppointments = barberAppointments.filter(
           (item) => String(item.status || '').toLowerCase() !== 'cancelled'
         );
-        const completedAppointments = appointments.filter((item) =>
+        const completedAppointments = barberAppointments.filter((item) =>
           ['confirmed', 'completed'].includes(String(item.status || '').toLowerCase())
         );
-        const cancelledAppointments = appointments.filter(
+        const cancelledAppointments = barberAppointments.filter(
           (item) => String(item.status || '').toLowerCase() === 'cancelled'
         );
 
@@ -76,7 +85,8 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
             id: item.id,
             time: String(item.time || '').slice(0, 5),
             name: item.user_name || 'Cliente',
-            service: item.service_name || 'Servico'
+            service: item.service_name || 'Serviço',
+            status: item.status || 'pending'
           }))
         );
         setStatus({ loading: false, error: '' });
@@ -91,7 +101,7 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [selectedDate, barberId]);
 
   function handleNavClick(id) {
     if (id === 'create') {
@@ -101,6 +111,41 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
 
     setActiveNav(id);
     onNavigate?.(id);
+  }
+
+  function changeDate(days) {
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const current = new Date(year, month - 1, day);
+    current.setDate(current.getDate() + days);
+    const newDate = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(
+      current.getDate()
+    ).padStart(2, '0')}`;
+    setSelectedDate(newDate);
+  }
+
+  function formatDateDisplay(dateStr) {
+    const [year, month, day] = dateStr.split('-');
+    const date = new Date(year, month - 1, day);
+    const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+    const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    return `${weekdays[date.getDay()]}, ${day} de ${months[date.getMonth()]}`;
+  }
+
+  async function handleConfirmAppointment(appointmentId) {
+    setConfirmingId(appointmentId);
+    try {
+      await confirmAppointment(appointmentId);
+      // Recarregar agendamentos após confirmação
+      setAgendaItems(prevItems =>
+        prevItems.map(item =>
+          item.id === appointmentId ? { ...item, status: 'confirmed' } : item
+        )
+      );
+    } catch (error) {
+      alert(`Erro ao confirmar: ${error.message}`);
+    } finally {
+      setConfirmingId(null);
+    }
   }
 
   return (
@@ -146,7 +191,39 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
               </section>
 
               <section className="chief-agenda">
-                <h2 className="chief-agenda-title">AGENDA DO DIA</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <button 
+                    type="button"
+                    onClick={() => changeDate(-1)}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: 'transparent',
+                      border: '1px solid #d4af37',
+                      color: '#d4af37',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ← Anterior
+                  </button>
+                  <h2 className="chief-agenda-title">{formatDateDisplay(selectedDate)}</h2>
+                  <button 
+                    type="button"
+                    onClick={() => changeDate(1)}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: 'transparent',
+                      border: '1px solid #d4af37',
+                      color: '#d4af37',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Próximo →
+                  </button>
+                </div>
                 <div className="chief-agenda-list">
                   {status.loading ? (
                     <div className="chief-empty">Carregando agenda...</div>
@@ -155,15 +232,48 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
                     <div className="chief-empty">{status.error}</div>
                   ) : null}
                   {!status.loading && !status.error && agendaItems.length === 0 ? (
-                    <div className="chief-empty">Nenhum agendamento hoje.</div>
+                    <div className="chief-empty">Nenhum agendamento nesta data.</div>
                   ) : null}
                   {!status.loading && !status.error
                     ? agendaItems.map((item) => (
-                        <article key={item.id} className="chief-agenda-item">
-                          <span className="chief-agenda-time">{item.time}</span>
-                          <div className="chief-agenda-info">
-                            <strong>{item.name}</strong>
-                            <span>{item.service}</span>
+                        <article key={item.id} className="chief-agenda-item" style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1 }}>
+                            <span className="chief-agenda-time">{item.time}</span>
+                            <div className="chief-agenda-info">
+                              <strong>{item.name}</strong>
+                              <span>{item.service}</span>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              backgroundColor: item.status === 'pending' ? '#fed7aa' : '#bbf7d0',
+                              color: item.status === 'pending' ? '#7c2d12' : '#065f46'
+                            }}>
+                              {item.status === 'pending' ? 'Pendente' : 'Confirmado'}
+                            </span>
+                            {item.status === 'pending' && (
+                              <button
+                                type="button"
+                                onClick={() => handleConfirmAppointment(item.id)}
+                                disabled={confirmingId === item.id}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#d4af37',
+                                  color: '#1a1a1a',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: confirmingId === item.id ? 'not-allowed' : 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  opacity: confirmingId === item.id ? 0.6 : 1
+                                }}
+                              >
+                                {confirmingId === item.id ? 'Confirmando...' : 'Confirmar'}
+                              </button>
+                            )}
                           </div>
                         </article>
                       ))

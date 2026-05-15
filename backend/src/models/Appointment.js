@@ -131,6 +131,7 @@ class Appointment {
 
   /**
    * Buscar horários ocupados por barbeiro em uma data específica
+   * Considera apenas agendamentos confirmados ou completados
    * @param {Number} barberId - ID do barbeiro
    * @param {String} date - Data no formato YYYY-MM-DD
    * @returns {Array} Lista de horários ocupados
@@ -140,7 +141,7 @@ class Appointment {
     
     try {
       const [rows] = await connection.query(
-        'SELECT time FROM appointments WHERE barber_id = ? AND date = ? AND status != "cancelled"',
+        'SELECT time FROM appointments WHERE barber_id = ? AND date = ? AND status IN ("confirmed", "completed")',
         [barberId, date]
       );
       
@@ -179,6 +180,55 @@ class Appointment {
         WHERE a.date = ?
         ORDER BY a.time ASC
       `, [date]);
+      
+      return rows;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Buscar agendamentos de um usuário em uma data específica
+   * @param {Number} userId - ID do usuário
+   * @param {String} date - Data no formato YYYY-MM-DD
+   * @returns {Array} Lista de agendamentos do usuário na data
+   */
+  static async findByUserAndDate(userId, date) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [rows] = await connection.query(`
+        SELECT a.*, b.name as barber_name, s.name as service_name
+        FROM appointments a
+        LEFT JOIN users b ON a.barber_id = b.id
+        LEFT JOIN services s ON a.service_id = s.id
+        WHERE a.user_id = ? AND a.date = ?
+        ORDER BY a.time ASC
+      `, [userId, date]);
+      
+      return rows;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Buscar agendamentos ativos do usuário
+   * @param {Number} userId - ID do usuário
+   * @returns {Array} Lista de agendamentos ativos (pending ou confirmed)
+   */
+  static async findActiveByUserId(userId) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [rows] = await connection.query(`
+        SELECT a.*, b.name as barber_name, s.name as service_name
+        FROM appointments a
+        LEFT JOIN users b ON a.barber_id = b.id
+        LEFT JOIN services s ON a.service_id = s.id
+        WHERE a.user_id = ? AND a.status IN ('pending', 'confirmed')
+        ORDER BY a.date ASC, a.time ASC
+      `, [userId]);
       
       return rows;
     } finally {

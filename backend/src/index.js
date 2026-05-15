@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
 const db = require('./database');
 const authRoutes = require('./routes/authRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
@@ -17,9 +18,17 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Servir arquivos estáticos
+app.use(express.static(path.join(__dirname, '../public')));
+
 // Rotas básicas
 app.get('/', (req, res) => {
   res.json({ message: 'API Barbearia funcionando!' });
+});
+
+// Rota para a página de confirmação de agendamento
+app.get('/confirm-appointment', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/confirm-appointment.html'));
 });
 
 // Rota para testar conexão com banco de dados
@@ -82,6 +91,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`📝 Teste a conexão: http://localhost:${PORT}/api/test-db`);
   console.log(`🔐 API de Autenticação: http://localhost:${PORT}/api/auth`);
+  console.log(`📋 Confirmar Agendamento: http://localhost:${PORT}/confirm-appointment`);
   console.log(`\n📚 Endpoints disponíveis:`);
   console.log(`  POST   /api/auth/register     - Cadastro de usuário`);
   console.log(`  POST   /api/auth/login        - Login`);
@@ -92,4 +102,5 @@ app.listen(PORT, () => {
   console.log(`  GET    /api/admin/barbers     - Listar barbeiros (requer autenticação)`);
   console.log(`  GET    /api/admin/barbers/:id - Detalhes barbeiro (requer autenticação)`);
   console.log(`  DELETE /api/admin/barbers/:id - Excluir barbeiro (requer autenticação)`);
+  console.log(`  POST   /api/appointments/:id/confirm - Confirmar agendamento`);
 });
