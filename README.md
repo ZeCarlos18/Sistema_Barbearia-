@@ -15,11 +15,12 @@ Principais funcionalidades:
 
 | Papel | Membro |
 |-------|--------|
-| Scrum Master & Testes | Teógenes Antonio |
+| Scrum Master | Teógenes Antonio |
 | Product Owner & Front-end | João Vitor Maia |
 | Back-end | Caique de Souza |
 | Back-end | José Carlos |
 | Front-end | Matheus |
+| Testes | Nicolas Dias|
 
 ## 🛠️ Tecnologias
 
