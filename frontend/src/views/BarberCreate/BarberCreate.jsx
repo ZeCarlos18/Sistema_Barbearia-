@@ -18,45 +18,112 @@ export default function BarberCreate({ onBack }) {
   const [startTime, setStartTime] = React.useState('09:00');
   const [endTime, setEndTime] = React.useState('19:00');
   const [form, setForm] = React.useState({ name: '', email: '', phone: '', password: '' });
+  const [photoBase64, setPhotoBase64] = React.useState(''); // Novo estado para a foto
   const [feedback, setFeedback] = React.useState({ type: '', message: '' });
   const [loading, setLoading] = React.useState(false);
 
   function toggleDay(dayId) {
     setSelectedDays((current) => {
-      if (current.includes(dayId)) {
-        return current.filter((item) => item !== dayId);
-      }
+      if (current.includes(dayId)) return current.filter((item) => item !== dayId);
       return [...current, dayId];
     });
   }
 
+// Conversor e Validador da Foto de Perfil
+  function handlePhotoChange(event) {
+    const file = event.target.files[0];
+    
+    if (file) {
+      // 1. Bloqueio Estrito: Verificar se o arquivo é realmente uma imagem
+      if (!file.type.startsWith('image/')) {
+        setFeedback({ type: 'error', message: 'Formato inválido. Por favor, envie apenas imagens (PNG, JPG).' });
+        // Limpa o campo do ficheiro para que o utilizador possa tentar de novo
+        event.target.value = ''; 
+        return;
+      }
+
+      // 2. Bloqueio de Tamanho: Limitar a 2MB (2 * 1024 * 1024 bytes)
+      if (file.size > 2 * 1024 * 1024) {
+        setFeedback({ type: 'error', message: 'A imagem é muito pesada. O tamanho máximo permitido é 2MB.' });
+        event.target.value = ''; 
+        return;
+      }
+
+      // Se passou nas validações, converte para Base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoBase64(reader.result);
+        setFeedback({ type: '', message: '' });
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
-    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.password.trim()) {
-      setFeedback({ type: 'error', message: 'Preencha nome, email, telefone e senha.' });
-      return;
-    }
-
-    if (form.password.trim().length < 6) {
-      setFeedback({ type: 'error', message: 'A senha deve ter no minimo 6 caracteres.' });
-      return;
-    }
-
     setFeedback({ type: '', message: '' });
+
+    // 1. Validar preenchimento obrigatório
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
+      setFeedback({ type: 'error', message: 'Preencha nome, email e telefone.' });
+      return;
+    }
+
+    // 2. Validar Nome (apenas letras)
+    const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/;
+    if (!nameRegex.test(form.name.trim())) {
+      setFeedback({ type: 'error', message: 'O nome só pode conter letras e espaços.' });
+      return;
+    }
+
+    // 3. Validar Telefone
+    const phoneDigits = form.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      setFeedback({ type: 'error', message: 'O telefone deve conter o DDD e número válido.' });
+      return;
+    }
+
+// 4. Validar Dias e Horários
+    if (selectedDays.length === 0) {
+      setFeedback({ type: 'error', message: 'Selecione pelo menos um dia de atendimento.' });
+      return;
+    }
+    
+    if (!startTime || !startTime.trim() || !endTime || !endTime.trim()) {
+      setFeedback({ type: 'error', message: 'O horário de início e fim são obrigatórios.' });
+      return;
+    }
+
+    if (startTime === '00:00' || endTime === '00:00') {
+      setFeedback({ type: 'error', message: 'Horários como 00:00 não são válidos para atendimento.' });
+      return;
+    }
+
+    if (startTime >= endTime) {
+      setFeedback({ type: 'error', message: 'O horário de término deve ser depois do horário de início.' });
+      return;
+    }
+
     setLoading(true);
 
+    // Envio para a API
     createBarber({
       name: form.name,
       email: form.email,
-      phone: form.phone,
-      password: form.password
+      phone: phoneDigits,
+      password: form.password,
+      availableDays: selectedDays,
+      startTime,
+      endTime,
+      photoUrl: photoBase64
     })
       .then((response) => {
         const generated = response.generatedPassword
-          ? `Senha temporaria: ${response.generatedPassword}`
+          ? `Senha temporária: ${response.generatedPassword}`
           : 'Barbeiro criado com sucesso.';
         setFeedback({ type: 'success', message: generated });
         setForm({ name: '', email: '', phone: '', password: '' });
+        setPhotoBase64('');
       })
       .catch((error) => {
         setFeedback({ type: 'error', message: error.message || 'Erro ao criar barbeiro.' });
@@ -76,65 +143,73 @@ export default function BarberCreate({ onBack }) {
           </header>
 
           <main className="barber-create-main">
+            {/* Secção da Foto de Perfil Opcional */}
             <div className="barber-photo">
-              <button type="button" className="barber-photo-btn" aria-label="Adicionar foto">
-                <FiPlus size={20} />
-              </button>
-              <span className="barber-photo-label">FOTO</span>
+              <label className="barber-photo-btn" style={{ overflow: 'hidden', cursor: 'pointer' }}>
+                <input 
+                  type="file" 
+                  accept="image/png, image/jpeg" 
+                  onChange={handlePhotoChange} 
+                  style={{ display: 'none' }} 
+                />
+                {photoBase64 ? (
+                  <img src={photoBase64} alt="Pré-visualização" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <FiPlus size={20} />
+                )}
+              </label>
+              <span className="barber-photo-label">FOTO (Opcional)</span>
             </div>
 
             <form className="barber-form" onSubmit={handleSubmit}>
               <div className="barber-field">
-                <label htmlFor="barber-name">Nome completo</label>
+                <label htmlFor="barber-name">Nome completo *</label>
                 <input
                   id="barber-name"
                   className="barber-input"
                   type="text"
-                  placeholder=""
                   value={form.name}
-                  onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                  autoComplete="name"
+                  onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
                 />
               </div>
 
               <div className="barber-field">
-                <label htmlFor="barber-email">E-mail</label>
+                <label htmlFor="barber-email">E-mail *</label>
                 <input
                   id="barber-email"
                   className="barber-input"
                   type="email"
-                  placeholder=""
                   value={form.email}
-                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                  autoComplete="email"
+                  onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))}
                 />
               </div>
 
               <div className="barber-field">
-                <label htmlFor="barber-phone">Telefone</label>
+                <label htmlFor="barber-phone">Telefone (com DDD) *</label>
                 <input
                   id="barber-phone"
                   className="barber-input"
                   type="tel"
-                  placeholder=""
+                  maxLength={11}
+                  placeholder="Ex: 11999999999"
                   value={form.phone}
-                  onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
-                  autoComplete="tel"
+                  onChange={(e) => {
+                    // Remove letras/símbolos imediatamente
+                    const onlyNumbers = e.target.value.replace(/\D/g, '');
+                    setForm((c) => ({ ...c, phone: onlyNumbers }));
+                  }}
                 />
               </div>
 
               <div className="barber-field">
-                <label htmlFor="barber-password">Senha</label>
+                <label htmlFor="barber-password">Senha (Opcional)</label>
                 <input
                   id="barber-password"
                   className="barber-input"
                   type="password"
-                  placeholder=""
                   value={form.password}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, password: event.target.value }))
-                  }
-                  autoComplete="new-password"
+                  onChange={(e) => setForm((c) => ({ ...c, password: e.target.value }))}
+                  placeholder="Deixe em branco para gerar"
                 />
               </div>
 
@@ -144,10 +219,8 @@ export default function BarberCreate({ onBack }) {
                   {weekDays.map((day) => (
                     <button
                       type="button"
-                      key={`${day.label}-${day.id}`}
-                      className={`barber-day ${
-                        selectedDays.includes(day.id) ? 'is-active' : ''
-                      }`}
+                      key={day.id}
+                      className={`barber-day ${selectedDays.includes(day.id) ? 'is-active' : ''}`}
                       onClick={() => toggleDay(day.id)}
                     >
                       {day.label}
@@ -161,21 +234,11 @@ export default function BarberCreate({ onBack }) {
                 <div className="barber-time-row">
                   <div className="barber-time-card">
                     <span>Início</span>
-                    <input
-                      className="barber-time-input"
-                      type="time"
-                      value={startTime}
-                      onChange={(event) => setStartTime(event.target.value)}
-                    />
+                    <input className="barber-time-input" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
                   </div>
                   <div className="barber-time-card">
                     <span>Fim</span>
-                    <input
-                      className="barber-time-input"
-                      type="time"
-                      value={endTime}
-                      onChange={(event) => setEndTime(event.target.value)}
-                    />
+                    <input className="barber-time-input" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -184,15 +247,11 @@ export default function BarberCreate({ onBack }) {
                 {loading ? 'Salvando...' : 'Concluir cadastro'}
               </button>
 
-              {feedback.message ? (
-                <div
-                  className={`barber-feedback ${
-                    feedback.type === 'error' ? 'barber-feedback--error' : 'barber-feedback--success'
-                  }`}
-                >
+              {feedback.message && (
+                <div className={`barber-feedback ${feedback.type === 'error' ? 'barber-feedback--error' : 'barber-feedback--success'}`}>
                   {feedback.message}
                 </div>
-              ) : null}
+              )}
             </form>
           </main>
         </div>

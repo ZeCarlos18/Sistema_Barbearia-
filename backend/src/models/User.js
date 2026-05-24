@@ -7,37 +7,41 @@ class User {
    * @param {Object} userData - Dados do usuário {email, password, name, phone, role}
    * @returns {Object} Dados do usuário criado
    */
+
   static async create(userData) {
-    const { email, password, name, phone = null, role = 'client' } = userData;
+    const { 
+      email, 
+      password, 
+      name, 
+      phone = null, 
+      role = 'client',
+      availableDays = null,
+      startTime = null,
+      endTime = null,
+      photoUrl = null
+    } = userData;
     
     const connection = await pool.getConnection();
     
     try {
-      // Verificar se o email já existe
       const [existingUser] = await connection.query(
         'SELECT id FROM users WHERE email = ?',
         [email]
       );
       
-      if (existingUser.length > 0) {
-        throw new Error('EMAIL_ALREADY_EXISTS');
-      }
+      if (existingUser.length > 0) throw new Error('EMAIL_ALREADY_EXISTS');
       
-      // Hash da senha
       const hashedPassword = await bcryptjs.hash(password, 10);
       
-      // Inserir novo usuário
+      // Nova Query com os campos adicionais
       const [result] = await connection.query(
-        'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
-        [name, email, hashedPassword, phone, role]
+        `INSERT INTO users 
+        (name, email, password, phone, role, available_days, start_time, end_time, photo_url, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [name, email, hashedPassword, phone, role, availableDays, startTime, endTime, photoUrl]
       );
       
-      return {
-        id: result.insertId,
-        name,
-        email,
-        createdAt: new Date()
-      };
+      return { id: result.insertId, name, email, createdAt: new Date() };
     } finally {
       connection.release();
     }
@@ -63,6 +67,26 @@ class User {
     }
   }
 
+  /**
+   * Buscar usuário por nome exato
+   * @param {String} name - Nome do usuário
+   * @returns {Object} Dados do usuário ou null
+   */
+  static async findByName(name) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [users] = await connection.query(
+        'SELECT id, name FROM users WHERE name = ?',
+        [name]
+      );
+      
+      return users.length > 0 ? users[0] : null;
+    } finally {
+      connection.release();
+    }
+  }
+  
   /**
    * Buscar usuário por ID
    * @param {Number} id - ID do usuário

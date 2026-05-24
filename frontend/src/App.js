@@ -1,4 +1,7 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+
+// Importação das Views
 import Welcome from './views/Welcome';
 import Register from './views/Register/Register';
 import Login from './views/Login/Login';
@@ -11,10 +14,7 @@ import BarberCreate from './views/BarberCreate/BarberCreate';
 
 function getStoredUser() {
   const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
-  if (!stored) {
-    return null;
-  }
-
+  if (!stored) return null;
   try {
     return JSON.parse(stored);
   } catch (error) {
@@ -22,114 +22,113 @@ function getStoredUser() {
   }
 }
 
-function App() {
-  const [screen, setScreen] = React.useState('welcome');
+// 🛡️ Guardião de Rotas (Impede acesso sem login ou permissão)
+function ProtectedRoute({ children, allowedRoles }) {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  const user = getStoredUser();
 
-  React.useEffect(() => {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (!token) {
-      return;
-    }
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
 
-    const user = getStoredUser();
-    if (user?.role === 'admin' || user?.role === 'barber') {
-      setScreen('barber-chief');
-    } else {
-      setScreen('home');
-    }
-  }, []);
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // Se for cliente tentando acessar painel de barbeiro, volta para a home
+    return <Navigate to="/" replace />; 
+  }
 
-  const handleCreate = () => setScreen('register');
-  const handleLogin = () => setScreen('login');
-  const handleRecover = () => setScreen('recover');
-  const handleBack = () => setScreen('welcome');
+  return children;
+}
+
+// 🗺️ Configuração das Rotas
+function AppRoutes() {
+  const navigate = useNavigate();
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  const user = getStoredUser();
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
-    setScreen('welcome');
-  };
-  const handleStartBooking = () => setScreen('booking');
-  const handleLoginSuccess = (user) => {
-    if (user?.role === 'admin' || user?.role === 'barber') {
-      setScreen('barber-chief');
-    } else {
-      setScreen('home');
-    }
+    navigate('/');
   };
 
   const handleClientNavigate = (page) => {
-    if (page === 'home') {
-      setScreen('home');
-    }
-
-    if (page === 'profile') {
-      setScreen('client-settings');
-    }
-
-    if (page === 'calendar') {
-      setScreen('booking');
-    }
+    if (page === 'home') navigate('/home');
+    if (page === 'profile') navigate('/profile');
+    if (page === 'calendar') navigate('/booking');
   };
 
   const handleBarberNavigate = (page) => {
-    if (page === 'home') {
-      setScreen('barber-chief');
-    }
+    if (page === 'home') navigate('/barber-dashboard');
   };
 
-  if (screen === 'home') {
-    return (
-      <Home
-        onLogout={handleLogout}
-        onStartBooking={handleStartBooking}
-        onNavigate={handleClientNavigate}
-      />
-    );
-  }
+  return (
+    <Routes>
+      {/* --- ROTAS PÚBLICAS --- */}
+      <Route path="/" element={
+        token && user ? (
+          <Navigate to={user.role === 'admin' || user.role === 'barber' ? '/barber-dashboard' : '/home'} replace />
+        ) : (
+          <Welcome onCreateAccount={() => navigate('/register')} onLogin={() => navigate('/login')} />
+        )
+      } />
+      
+      <Route path="/login" element={
+        <Login
+          onLoginSuccess={(userData) => {
+            if (userData?.role === 'admin' || userData?.role === 'barber') navigate('/barber-dashboard');
+            else navigate('/home');
+          }}
+          onGoToRegister={() => navigate('/register')}
+          onGoToRecover={() => navigate('/recover')}
+        />
+      } />
+      <Route path="/register" element={<Register onBack={() => navigate('/')} />} />
+      <Route path="/recover" element={<RecoverPassword onBackToLogin={() => navigate('/login')} />} />
 
-  if (screen === 'booking') {
-    return <Booking onBack={() => setScreen('home')} />;
-  }
+      {/* --- ROTAS PRIVADAS (CLIENTES) --- */}
+      <Route path="/home" element={
+        <ProtectedRoute allowedRoles={['client']}>
+          <Home onLogout={handleLogout} onStartBooking={() => navigate('/booking')} onNavigate={handleClientNavigate} />
+        </ProtectedRoute>
+      } />
+      <Route path="/booking" element={
+        <ProtectedRoute allowedRoles={['client']}>
+          <Booking onBack={() => navigate('/home')} />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute allowedRoles={['client']}>
+          <ClientSettings onNavigate={handleClientNavigate} onLogout={handleLogout} />
+        </ProtectedRoute>
+      } />
 
-  if (screen === 'client-settings') {
-    return <ClientSettings onNavigate={handleClientNavigate} onLogout={handleLogout} />;
-  }
+      {/* --- ROTAS PRIVADAS (BARBEIROS E ADMIN) --- */}
+      <Route path="/barber-dashboard" element={
+        <ProtectedRoute allowedRoles={['barber', 'admin']}>
+          <BarberChief onOpenCreate={() => navigate('/barber-create')} onNavigate={handleBarberNavigate} onLogout={handleLogout} />
+        </ProtectedRoute>
+      } />
+      <Route path="/barber-create" element={
+        <ProtectedRoute allowedRoles={['admin']}>
+          <BarberCreate onBack={() => navigate('/barber-dashboard')} />
+        </ProtectedRoute>
+      } />
 
-  if (screen === 'barber-chief') {
-    return (
-      <BarberChief
-        onOpenCreate={() => setScreen('barber-create')}
-        onNavigate={handleBarberNavigate}
-        onLogout={handleLogout}
-      />
-    );
-  }
+      {/* Rota Fallback (Página 404 - Redireciona para o início) */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
 
-  if (screen === 'barber-create') {
-    return <BarberCreate onBack={() => setScreen('barber-chief')} />;
-  }
-
-  if (screen === 'register') {
-    return <Register onBack={handleBack} />;
-  }
-
-  if (screen === 'recover') {
-    return <RecoverPassword onBackToLogin={() => setScreen('login')} />;
-  }
-
-  if (screen === 'login') {
-    return (
-      <Login
-        onLoginSuccess={handleLoginSuccess}
-        onGoToRegister={handleCreate}
-        onGoToRecover={handleRecover}
-      />
-    );
-  }
-
-  return <Welcome onCreateAccount={handleCreate} onLogin={handleLogin} />;
+// 🚀 Ponto de Entrada da Aplicação
+function App() {
+  return (
+    <Router>
+      <AppRoutes />
+    </Router>
+  );
 }
 
 export default App;

@@ -9,19 +9,28 @@ class AuthController {
   /**
    * Permitir que novos usuários cadastrem um e-mail no sistema
    */
-  static async register(req, res) {
+static async register(req, res) {
     try {
       const { name, email, password, phone } = req.body;
 
-      // Validar campos obrigatórios
-      if (!name || !email || !password) {
+      // 1. Validar campos obrigatórios (agora exigindo o telefone)
+      if (!name || !email || !password || !phone) {
         return res.status(400).json({
           success: false,
-          message: 'Nome, email e senha são obrigatórios'
+          message: 'Nome, email, senha e telefone são obrigatórios'
         });
       }
 
-      // Validar email único
+      // 2. Tratar e validar formato do Telefone (DDD + Número)
+      const formattedPhone = phone.replace(/\D/g, ''); // Remove tudo o que não for número
+      if (formattedPhone.length < 10 || formattedPhone.length > 11) {
+        return res.status(400).json({
+          success: false,
+          message: 'Telefone inválido: deve conter DDD e o número (10 a 11 dígitos).'
+        });
+      }
+
+      // 3. Validar email único
       const existingUser = await User.findByEmail(email);
       if (existingUser) {
         return res.status(409).json({
@@ -30,12 +39,21 @@ class AuthController {
         });
       }
 
-      // Criar novo usuário
+      // 4. Validar telefone único (Não permitir duplicatas)
+      const existingPhone = await User.findByPhone(formattedPhone);
+      if (existingPhone) {
+        return res.status(409).json({
+          success: false,
+          message: 'Este telefone já está registrado no sistema'
+        });
+      }
+
+      // 5. Criar novo usuário com o telefone formatado
       const newUser = await User.create({
         name,
         email,
         password,
-        phone
+        phone: formattedPhone
       });
 
       return res.status(201).json({
@@ -64,7 +82,6 @@ class AuthController {
       });
     }
   }
-
   /**
    * Permitir que usuários cadastrados acessem o sistema com e-mail e senha
    */

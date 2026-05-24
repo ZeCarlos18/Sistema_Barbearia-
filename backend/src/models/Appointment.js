@@ -42,7 +42,7 @@ class Appointment {
     try {
       const [rows] = await connection.query(`
         SELECT a.*, u.name as user_name, u.email as user_email, 
-               b.name as barber_name, s.name as service_name
+                b.name as barber_name, s.name as service_name
         FROM appointments a
         LEFT JOIN users u ON a.user_id = u.id
         LEFT JOIN users b ON a.barber_id = b.id
@@ -67,7 +67,7 @@ class Appointment {
     try {
       const [rows] = await connection.query(`
         SELECT a.*, u.name as user_name, u.email as user_email, 
-               b.name as barber_name, s.name as service_name
+                b.name as barber_name, s.name as service_name
         FROM appointments a
         LEFT JOIN users u ON a.user_id = u.id
         LEFT JOIN users b ON a.barber_id = b.id
@@ -172,7 +172,7 @@ class Appointment {
     try {
       const [rows] = await connection.query(`
         SELECT a.*, u.name as user_name, u.email as user_email, 
-               b.name as barber_name, s.name as service_name
+                b.name as barber_name, s.name as service_name
         FROM appointments a
         LEFT JOIN users u ON a.user_id = u.id
         LEFT JOIN users b ON a.barber_id = b.id
@@ -212,7 +212,7 @@ class Appointment {
     }
   }
 
-  /**
+/**
    * Buscar agendamentos ativos do usuário
    * @param {Number} userId - ID do usuário
    * @returns {Array} Lista de agendamentos ativos (pending ou confirmed)
@@ -226,7 +226,9 @@ class Appointment {
         FROM appointments a
         LEFT JOIN users b ON a.barber_id = b.id
         LEFT JOIN services s ON a.service_id = s.id
-        WHERE a.user_id = ? AND a.status IN ('pending', 'confirmed')
+        WHERE a.user_id = ? 
+          AND a.status IN ('pending', 'confirmed')
+          AND a.date >= CURDATE()
         ORDER BY a.date ASC, a.time ASC
       `, [userId]);
       

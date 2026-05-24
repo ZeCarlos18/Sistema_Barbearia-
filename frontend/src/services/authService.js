@@ -1,41 +1,22 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
-
-async function request(path, data) {
-  const headers = {
-    'Content-Type': 'application/json'
-  };
-
-  const token = localStorage.getItem('token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(data)
-  });
-
-  const payload = await response.json();
-
-  if (!response.ok) {
-    throw new Error(payload.message || 'Erro na requisição');
-  }
-
-  return payload;
-}
+import { apiFetch } from './apiClient';
 
 export function login(credentials) {
-  return request('/api/auth/login', credentials);
+  return apiFetch('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials)
+  });
 }
 
 export function register(userData) {
-  return request('/api/auth/register', userData);
+  return apiFetch('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(userData)
+  });
 }
 
 export async function logout() {
   try {
-    await request('/api/auth/logout', {});
+    await apiFetch('/api/auth/logout', { method: 'POST' });
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     sessionStorage.removeItem('token');

@@ -9,122 +9,96 @@ class AdminController {
    * Criar novo barbeiro
    * POST /api/admin/barbers
    */
+
   static async createBarber(req, res) {
     try {
-      const { name, email, password, phone } = req.body;
+// Receber todos os dados do corpo da requisição
+      const { name, email, password, phone, availableDays, startTime, endTime, photoUrl } = req.body;
 
-      // Validar campos obrigatórios
-      if (!name || !name.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: 'O campo nome é obrigatório e não pode estar em branco'
-        });
+      // 1. Validação de Preenchimento Obrigatório (Nome, Email, Telefone)
+      if (!name || !name.trim()) return res.status(400).json({ success: false, message: 'O nome é obrigatório.' });
+      if (!email || !email.trim()) return res.status(400).json({ success: false, message: 'O email é obrigatório.' });
+      if (!phone || !phone.trim()) return res.status(400).json({ success: false, message: 'O telefone é obrigatório.' });
+
+      // 2. Dias e Horários Obrigatórios e Lógicos
+      if (!availableDays || !Array.isArray(availableDays) || availableDays.length === 0) {
+        return res.status(400).json({ success: false, message: 'Selecione pelo menos um dia de atendimento.' });
+      }
+      
+      if (!startTime || !startTime.trim() || startTime === '00:00') {
+        return res.status(400).json({ success: false, message: 'O horário de início é inválido ou não pode ser 00:00.' });
+      }
+      
+      if (!endTime || !endTime.trim() || endTime === '00:00') {
+        return res.status(400).json({ success: false, message: 'O horário de término é inválido ou não pode ser 00:00.' });
       }
 
-      if (!email || !email.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: 'O campo email é obrigatório'
-        });
+      if (startTime >= endTime) {
+        return res.status(400).json({ success: false, message: 'O horário de término deve ser posterior ao horário de início.' });
       }
 
-      if (!phone || !phone.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: 'O campo telefone é obrigatório'
-        });
-      }
-
-      // Validar nome apenas letras e espaços
-      const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ ]+$/;
+      // 3. Validação: Apenas letras e espaços no nome
+      const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/;
       if (!nameRegex.test(name.trim())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Nome inválido: apenas letras e espaços são permitidos'
-        });
+        return res.status(400).json({ success: false, message: 'Nome inválido: utilize apenas letras e espaços.' });
       }
 
-      // Validar email
+      // 4. Validação: Formato de Email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Formato de email inválido'
-        });
+        return res.status(400).json({ success: false, message: 'Formato de email inválido.' });
       }
 
-      // Normalizar telefone
-      const formattedPhone = phone.replace(/\D/g, '');
-      const phoneRegex = /^\d{10,11}$/;
-      if (!phoneRegex.test(formattedPhone)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Telefone inválido: deve conter DDD e apenas números (10 ou 11 dígitos)'
-        });
+      // 5. Validação: Telefone apenas números e validação de DDD (10 ou 11 dígitos)
+      const formattedPhone = phone.replace(/\D/g, ''); // Remove tudo o que não for número
+      if (formattedPhone.length < 10 || formattedPhone.length > 11) {
+        return res.status(400).json({ success: false, message: 'Telefone inválido: deve conter DDD e o número.' });
       }
 
-      // Validar email duplicado
+      // 6. Validação de Duplicatas (Nome, Email e Telefone)
+      const existingByName = await User.findByName(name.trim());
+      if (existingByName) {
+        return res.status(409).json({ success: false, message: 'Já existe um profissional registado com este nome exato.' });
+      }
+
       const existingByEmail = await User.findByEmail(email.trim().toLowerCase());
       if (existingByEmail) {
-        return res.status(409).json({
-          success: false,
-          message: 'Este email já está registrado no sistema'
-        });
+        return res.status(409).json({ success: false, message: 'Este email já está registado no sistema.' });
       }
 
-      // Validar telefone duplicado
       const existingByPhone = await User.findByPhone(formattedPhone);
       if (existingByPhone) {
-        return res.status(409).json({
-          success: false,
-          message: 'Este telefone já está registrado no sistema'
-        });
+        return res.status(409).json({ success: false, message: 'Este telefone já está registado no sistema.' });
       }
 
-      // Gerar senha temporária caso não seja informada
+      // 7. Criar senha temporária se não for enviada
       const randomPassword = password && password.trim() ? password : AdminController.generateTemporaryPassword();
 
-      // Criar barbeiro com role 'barber'
+      // 8. Salvar na Base de Dados
       const newBarber = await User.create({
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password: randomPassword,
         phone: formattedPhone,
-        role: 'barber'
+        role: 'barber',
+        availableDays: availableDays ? JSON.stringify(availableDays) : null,
+        startTime: startTime || null,
+        endTime: endTime || null,
+        photoUrl: photoUrl || null // Aqui guardamos o Base64 da imagem
       });
 
       const responsePayload = {
         success: true,
-        message: 'Barbeiro criado com sucesso',
-        barber: {
-          id: newBarber.id,
-          name: newBarber.name,
-          email: newBarber.email,
-          phone: formattedPhone,
-          role: 'barber'
-        }
+        message: 'Barbeiro criado com sucesso!',
+        barber: newBarber
       };
 
-      if (!password || !password.trim()) {
-        responsePayload.generatedPassword = randomPassword;
-      }
+      if (!password || !password.trim()) responsePayload.generatedPassword = randomPassword;
 
       return res.status(201).json(responsePayload);
     } catch (error) {
       console.error('Erro ao criar barbeiro:', error);
-
-      if (error.message === 'EMAIL_ALREADY_EXISTS') {
-        return res.status(409).json({
-          success: false,
-          message: 'Este email já está registrado no sistema'
-        });
-      }
-
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao criar barbeiro',
-        error: error.message
-      });
+      return res.status(500).json({ success: false, message: 'Erro ao criar barbeiro', error: error.message });
     }
   }
 

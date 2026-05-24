@@ -19,20 +19,33 @@ export default function Register({ onBack }) {
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+    
+    // Se o campo for o telefone, remove instantaneamente tudo o que não for número
+    const finalValue = name === 'phone' ? value.replace(/\D/g, '') : value;
+    
+    setForm((current) => ({ ...current, [name]: finalValue }));
   }
 
-  async function handleSubmit(event) {
+async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
     setError('');
     setMessage('');
 
+    // Validação do Telefone 
+    const phoneDigits = form.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      setError('O telefone deve conter o DDD e um número válido.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const payload = {
         name: form.name,
         email: form.email,
-        password: form.password
+        password: form.password,
+        phone: phoneDigits // Enviamos apenas os números para a API
       };
 
       await register(payload);
@@ -81,11 +94,12 @@ export default function Register({ onBack }) {
           />
 
           <TextField
-            label="Telefone"
+            label="Telefone (com DDD)"
             name="phone"
             value={form.phone}
             onChange={handleChange}
-            placeholder="(88) 99999-9999"
+            placeholder="Ex: 11999999999"
+            maxLength={11}
           />
 
           <TextField

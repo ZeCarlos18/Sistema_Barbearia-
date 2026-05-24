@@ -269,19 +269,19 @@ class AppointmentController {
     }
   }
 
-  /**
-   * Cancelar agendamento
-   * Segue as regras de negócio RF10:
-   * - O agendamento deve estar com status 'confirmado'
-   * - Deve validar prazo mínimo de 24 horas antes do agendamento
-   * - Atualiza o status para 'cancelado'
-   * - O horário fica automaticamente disponível para novos agendamentos
+/**
+   * Cancelar agendamento seguindo as Regras de Negócio:
+   * - Permite apenas agendamentos com status 'confirmed'
+   * - Valida o prazo mínimo de antecedência (24 horas)
+   * - Atualiza o status para 'cancelled'
+   * - Libera o horário automaticamente no sistema
+   * - Notifica o barbeiro responsável
    */
   static async cancel(req, res) {
     try {
       const { id } = req.params;
       
-      // Buscar o agendamento
+      // 1. Buscar o agendamento para extrair os dados
       const appointment = await Appointment.findById(id);
       if (!appointment) {
         return res.status(404).json({
@@ -290,32 +290,46 @@ class AppointmentController {
         });
       }
 
-      // Validar se o agendamento está confirmado
+      // REGRA: O sistema deve permitir o cancelamento de agendamentos com status "confirmado"
       if (appointment.status !== 'confirmed') {
         return res.status(409).json({
           success: false,
-          message: 'Apenas agendamentos confirmados podem ser cancelados'
+          message: 'Apenas agendamentos confirmados podem ser cancelados.'
         });
       }
 
-      // Validar prazo mínimo de 24 horas
-      const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+      // REGRA: O sistema deve validar regras de prazo mínimo para cancelamento (24 horas)
+      let dateStr = appointment.date;
+      if (appointment.date instanceof Date) {
+        dateStr = appointment.date.toISOString().split('T')[0];
+      }
+      
+      const appointmentDateTime = new Date(`${dateStr}T${appointment.time}`);
       const now = new Date();
       const hoursUntilAppointment = (appointmentDateTime - now) / (1000 * 60 * 60);
 
       if (hoursUntilAppointment < 24) {
         return res.status(409).json({
           success: false,
-          message: 'Não é possível cancelar com menos de 24 horas de antecedência'
+          message: 'Não é possível cancelar com menos de 24 horas de antecedência.'
         });
       }
 
-      // Atualizar status para cancelado
+      // REGRA: O sistema deve atualizar o status do agendamento para "cancelado"
+      // NOTA: Ao mudar para 'cancelled', o horário é automaticamente liberado para novos agendamentos
       const canceledAppointment = await Appointment.updateStatus(id, 'cancelled');
+
+      // REGRA: O barbeiro deve receber uma notificação de que um horário foi cancelado
+      // Como o sistema atual não possui infraestrutura de WebSockets ou tabela de notificações,
+      // centralizamos o disparo aqui através de logs do servidor e preparação do hook de envio.
+      console.log(`\n🔔 [NOTIFICAÇÃO SISTEMA]`);
+      console.log(`   Para: Barbeiro ID ${appointment.barber_id} (${appointment.barber_name})`);
+      console.log(`   Mensagem: O cliente ${appointment.user_name || 'Cliente'} cancelou o serviço de ${appointment.service_name} marcado para o dia ${dateStr} às ${String(appointment.time).slice(0, 5)}.`);
+      console.log(`   Status do Horário: Liberado e disponível na tabela.\n`);
 
       res.json({
         success: true,
-        message: 'Agendamento cancelado com sucesso',
+        message: 'Agendamento cancelado com sucesso e horário liberado.',
         data: canceledAppointment
       });
     } catch (error) {
