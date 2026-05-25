@@ -10,6 +10,9 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const availableTimesRoutes = require('./routes/availableTimesRoutes');
+const unavailabilityRoutes = require('./routes/unavailabilityRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const barberAvailabilityRoutes = require('./routes/barberAvailabilityRoutes');
 
 const app = express();
 
@@ -67,7 +70,15 @@ app.use('/api/admin', adminRoutes);
 // Rotas de Horários Disponíveis
 app.use('/api/available-times', availableTimesRoutes);
 
-// Rota 404
+// Rotas de Indisponibilidades (RF12)
+app.use('/api/unavailabilities', unavailabilityRoutes);
+
+// Rotas de Notificações
+app.use('/api/notifications', notificationRoutes);
+
+// Rotas de Disponibilidade do Barbeiro
+app.use('/api/barber-availability', barberAvailabilityRoutes);
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,

@@ -1,5 +1,7 @@
 const Appointment = require('../models/Appointment');
 const Service = require('../models/Service');
+const Unavailability = require('../models/Unavailability');
+const AvailabilityService = require('../services/AvailabilityService');
 
 class AppointmentController {
   /**
@@ -40,6 +42,14 @@ class AppointmentController {
         return res.status(409).json({
           success: false,
           message: 'Horário já está ocupado para este barbeiro nesta data'
+        });
+      }
+
+      const unavailabilities = await Unavailability.findActiveUnavailabilities(barberId, date, time);
+      if (unavailabilities.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Este horário está indisponível no momento'
         });
       }
 
@@ -176,17 +186,13 @@ class AppointmentController {
         });
       }
 
-      // Horários de funcionamento (9h às 19h, de 30 em 30 minutos)
       const allTimes = [];
       for (let hour = 9; hour < 19; hour++) {
         allTimes.push(`${hour.toString().padStart(2, '0')}:00`);
         allTimes.push(`${hour.toString().padStart(2, '0')}:30`);
       }
 
-      // Buscar horários ocupados
       const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
-
-      // Filtrar horários disponíveis
       const availableTimes = allTimes.filter(time => !occupiedTimes.includes(time));
 
       res.json({
@@ -200,6 +206,39 @@ class AppointmentController {
       });
     } catch (error) {
       console.error('Erro ao buscar horários:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar horários disponíveis',
+        error: error.message
+      });
+    }
+  }
+
+  static async getAvailableSlots(req, res) {
+    try {
+      const { barberId } = req.params;
+      const { date } = req.query;
+
+      if (!barberId || !date) {
+        return res.status(400).json({
+          success: false,
+          message: 'BarberId e date são obrigatórios'
+        });
+      }
+
+      const availableTimes = await AvailabilityService.getAvailableSlots(barberId, date);
+
+      res.json({
+        success: true,
+        data: {
+          barberId,
+          date,
+          availableTimes,
+          total: availableTimes.length
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao buscar slots disponíveis:', error);
       res.status(500).json({
         success: false,
         message: 'Erro ao buscar horários disponíveis',
@@ -376,6 +415,18 @@ class AppointmentController {
         return res.status(409).json({
           success: false,
           message: 'Horário já não está mais disponível para este barbeiro'
+        });
+      }
+
+      const unavailabilities = await Unavailability.findActiveUnavailabilities(
+        appointment.barber_id,
+        appointment.date,
+        appointment.time
+      );
+      if (unavailabilities.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Este horário está indisponível no momento'
         });
       }
 

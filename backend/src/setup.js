@@ -82,6 +82,48 @@ async function setupDatabase() {
     `);
     console.log('✅ Tabela "appointments" criada/verificada');
 
+    // Criar tabela de indisponibilidades (RF12)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS unavailabilities (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        barber_id INT NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        start_time TIME,
+        end_time TIME,
+        reason VARCHAR(255),
+        action ENUM('auto_cancel', 'suggest_reschedule', 'maintenance_warning') NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_barber (barber_id),
+        INDEX idx_dates (start_date, end_date),
+        FOREIGN KEY (barber_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ Tabela "unavailabilities" criada/verificada');
+
+    // Criar tabela de notificações
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        barber_id INT NOT NULL,
+        type VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        related_appointment_id INT,
+        status ENUM('unread', 'read') DEFAULT 'unread',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_user (user_id),
+        INDEX idx_status (status),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (barber_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (related_appointment_id) REFERENCES appointments(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ Tabela "notifications" criada/verificada');
+
     await connection.end();
     console.log('✅ Setup do banco de dados concluído!\n');
     
