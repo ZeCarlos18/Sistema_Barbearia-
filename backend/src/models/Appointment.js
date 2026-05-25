@@ -291,6 +291,42 @@ class Appointment {
       connection.release();
     }
   }
+
+  static async findByBarberAndDate(barberId, date) {
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.query(`
+        SELECT a.*, u.name as user_name, u.phone as user_phone, u.email as user_email,
+               s.name as service_name, s.duration as service_duration
+        FROM appointments a
+        LEFT JOIN users u ON a.user_id = u.id
+        LEFT JOIN services s ON a.service_id = s.id
+        WHERE a.barber_id = ? AND a.date = ? AND a.status IN ('confirmed', 'completed')
+        ORDER BY a.time ASC
+      `, [barberId, date]);
+      return rows;
+    } finally {
+      connection.release();
+    }
+  }
+
+  static async findByBarberDateRange(barberId, startDate, endDate) {
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.query(`
+        SELECT a.*, u.name as user_name, u.phone as user_phone, u.email as user_email,
+               s.name as service_name, s.duration as service_duration
+        FROM appointments a
+        LEFT JOIN users u ON a.user_id = u.id
+        LEFT JOIN services s ON a.service_id = s.id
+        WHERE a.barber_id = ? AND a.date BETWEEN ? AND ? AND a.status IN ('confirmed', 'completed')
+        ORDER BY a.date ASC, a.time ASC
+      `, [barberId, startDate, endDate]);
+      return rows;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = Appointment;

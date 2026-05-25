@@ -440,6 +440,116 @@ class AppointmentController {
       });
     }
   }
+
+  static async getBarberSchedule(req, res) {
+    try {
+      const { barberId } = req.params;
+      let { date } = req.params;
+
+      if (!barberId) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID do barbeiro é obrigatório'
+        });
+      }
+
+      if (!date) {
+        date = new Date().toISOString().split('T')[0];
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Data deve estar no formato YYYY-MM-DD'
+        });
+      }
+
+      const appointments = await Appointment.findByBarberAndDate(barberId, date);
+
+      res.json({
+        success: true,
+        data: {
+          barberId,
+          date,
+          scheduledAppointments: appointments.length,
+          appointments,
+          message: appointments.length === 0 ? `Nenhum agendamento para ${date}` : undefined
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao obter agenda do barbeiro:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao obter agenda do barbeiro',
+        error: error.message
+      });
+    }
+  }
+
+  static async getBarberScheduleByDateRange(req, res) {
+    try {
+      const { barberId } = req.params;
+      const { startDate, endDate } = req.query;
+
+      if (!barberId) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID do barbeiro é obrigatório'
+        });
+      }
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'startDate e endDate são obrigatórios (formato YYYY-MM-DD)'
+        });
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Datas devem estar no formato YYYY-MM-DD'
+        });
+      }
+
+      if (new Date(startDate) > new Date(endDate)) {
+        return res.status(400).json({
+          success: false,
+          message: 'startDate deve ser menor ou igual a endDate'
+        });
+      }
+
+      const appointments = await Appointment.findByBarberDateRange(barberId, startDate, endDate);
+
+      const appointmentsByDate = {};
+      appointments.forEach(apt => {
+        const dateStr = apt.date instanceof Date ? apt.date.toISOString().split('T')[0] : apt.date;
+        if (!appointmentsByDate[dateStr]) {
+          appointmentsByDate[dateStr] = [];
+        }
+        appointmentsByDate[dateStr].push(apt);
+      });
+
+      res.json({
+        success: true,
+        data: {
+          barberId,
+          startDate,
+          endDate,
+          totalAppointments: appointments.length,
+          appointmentsByDate,
+          message: appointments.length === 0 ? `Nenhum agendamento entre ${startDate} e ${endDate}` : undefined
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao obter agenda do barbeiro (intervalo):', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao obter agenda do barbeiro',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = AppointmentController;
