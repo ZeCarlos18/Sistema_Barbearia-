@@ -14,11 +14,7 @@ class User {
       password, 
       name, 
       phone = null, 
-      role = 'client',
-      availableDays = null,
-      startTime = null,
-      endTime = null,
-      photoUrl = null
+      role = 'client'
     } = userData;
     
     const connection = await pool.getConnection();
@@ -33,12 +29,11 @@ class User {
       
       const hashedPassword = await bcryptjs.hash(password, 10);
       
-      // Nova Query com os campos adicionais
       const [result] = await connection.query(
         `INSERT INTO users 
-        (name, email, password, phone, role, available_days, start_time, end_time, photo_url, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-        [name, email, hashedPassword, phone, role, availableDays, startTime, endTime, photoUrl]
+        (name, email, password, phone, role, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+        [name, email, hashedPassword, phone, role]
       );
       
       return { id: result.insertId, name, email, createdAt: new Date() };

@@ -133,16 +133,18 @@ JWT_SECRET=your-secret-key
 ```bash
 cd backend
 npm install
-node src/setup.js    # Cria as tabelas
-npm run seed         # Popula com dados de teste
-npm start            # Servidor na porta 3001
+npm run setup        # Cria as tabelas (executar uma única vez)
+npm run seed         # Popula com dados de teste (executar uma única vez)
+npm run dev          # Servidor em modo desenvolvimento na porta 3001
+npm start            # Servidor em modo produção
 ```
 
 ### Frontend
 ```bash
 cd frontend
 npm install
-npm start            # App na porta 3000
+npm start            # App na porta 3000 (modo desenvolvimento)
+npm run build        # Build otimizado para produção
 ```
 
 ---
@@ -211,11 +213,18 @@ npm run install:all # Instala dependências em backend e frontend
 ### Backend (`backend/`)
 
 ```bash
-npm run setup      # 🔧 Cria o banco de dados e tabelas (execute uma única vez!)
+npm install        # Instala as dependências
+npm run setup      # 🔧 Cria o banco de dados e tabelas (executar UMA VEZ!)
+npm run seed       # 🌱 Popula com dados de teste (executar UMA VEZ!)
 npm run dev        # 🚀 Inicia com nodemon (recarregamento automático)
 npm start          # Inicia o servidor em produção
 npm test           # Executar testes (quando implementados)
 ```
+
+**IMPORTANTE - Ordem de execução:**
+1. `npm install` - Instalar dependências
+2. `npm run setup` - Criar tabelas
+3. `npm run seed` - Popular com dados de teste
 
 ### Frontend (`frontend/`)
 

@@ -13,7 +13,7 @@ class Appointment {
     
     try {
       const [result] = await connection.query(
-        'INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, "pending", NOW(), NOW())',
+        'INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
         [userId, barberId, serviceId, date, time]
       );
       
@@ -24,7 +24,7 @@ class Appointment {
         serviceId,
         date,
         time,
-        status: 'pending',
+        status: 'confirmed',
         createdAt: new Date()
       };
     } finally {
@@ -233,6 +233,52 @@ class Appointment {
       `, [userId]);
       
       return rows;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Buscar agendamentos passados e futuros do usuário
+   * Seguindo RF23 - Visualizar Agendamentos Futuros e Passados
+   * @param {Number} userId - ID do usuário
+   * @returns {Object} { past: [], future: [] } agendamentos organizados por tipo
+   */
+  static async findPastAndFutureByUserId(userId) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [rows] = await connection.query(`
+        SELECT a.*, b.name as barber_name, s.name as service_name
+        FROM appointments a
+        LEFT JOIN users b ON a.barber_id = b.id
+        LEFT JOIN services s ON a.service_id = s.id
+        WHERE a.user_id = ?
+          AND a.status IN ('confirmed', 'completed', 'cancelled')
+        ORDER BY a.date ASC, a.time ASC
+      `, [userId]);
+
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      const past = [];
+      const future = [];
+
+      rows.forEach(appointment => {
+        const appointmentDate = new Date(appointment.date);
+        appointmentDate.setHours(0, 0, 0, 0);
+
+        if (appointmentDate < now || (appointmentDate.getTime() === now.getTime() && appointment.time < new Date().toTimeString().slice(0, 5))) {
+          past.push(appointment);
+        } else {
+          future.push(appointment);
+        }
+      });
+
+      return {
+        past: past.reverse(), // Mostrar mais recentes primeiro nos passados
+        future: future
+      };
     } finally {
       connection.release();
     }
