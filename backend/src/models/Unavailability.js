@@ -73,9 +73,12 @@ class Unavailability {
         query += ` AND a.date = ?`;
         params.push(startDate);
         
-        if (startTime && endTime) {
-          query += ` AND a.time BETWEEN ? AND ?`;
+        if (startTime && endTime && startTime !== endTime) {
+          query += ` AND TIME(a.time) BETWEEN ? AND ?`;
           params.push(startTime, endTime);
+        } else if (startTime && endTime && startTime === endTime) {
+          query += ` AND TIME(a.time) = ?`;
+          params.push(startTime);
         }
       } else {
         query += ` AND a.date BETWEEN ? AND ?`;
@@ -127,9 +130,9 @@ class Unavailability {
       const [rows] = await connection.query(
         `SELECT * FROM unavailabilities 
          WHERE barber_id = ? AND start_date <= ? AND end_date >= ?
-         AND (start_time IS NULL OR start_time <= ?)
-         AND (end_time IS NULL OR end_time >= ?)`,
-        [barberId, date, date, time, time]
+         AND ((start_time IS NULL AND end_time IS NULL) 
+           OR (start_time IS NOT NULL AND end_time IS NOT NULL AND TIME(?) BETWEEN TIME(start_time) AND TIME(end_time)))`,
+        [barberId, date, date, time]
       );
       return rows;
     } finally {
