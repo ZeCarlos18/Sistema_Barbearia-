@@ -11,6 +11,8 @@ import Booking from './views/Booking/Booking';
 import ClientSettings from './views/ClientSettings/ClientSettings';
 import BarberChief from './views/BarberChief/BarberChief';
 import BarberCreate from './views/BarberCreate/BarberCreate';
+import Appointments from './views/Appointments/Appointments';
+
 
 function getStoredUser() {
   const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
@@ -55,8 +57,8 @@ function AppRoutes() {
 
   const handleClientNavigate = (page) => {
     if (page === 'home') navigate('/home');
+    if (page === 'calendar') navigate('/appointments');
     if (page === 'profile') navigate('/profile');
-    if (page === 'calendar') navigate('/booking');
   };
 
   const handleBarberNavigate = (page) => {
@@ -96,6 +98,11 @@ function AppRoutes() {
       <Route path="/booking" element={
         <ProtectedRoute allowedRoles={['client']}>
           <Booking onBack={() => navigate('/home')} />
+        </ProtectedRoute>
+      } />
+      <Route path="/appointments" element={
+        <ProtectedRoute allowedRoles={['client']}>
+          <Appointments onNavigate={handleClientNavigate} onLogout={handleLogout} />
         </ProtectedRoute>
       } />
       <Route path="/profile" element={
