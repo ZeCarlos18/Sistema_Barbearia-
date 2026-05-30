@@ -17,7 +17,14 @@ const authenticate = (req, res, next) => {
     }
     
     // Verificar e decodificar o token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({
+        success: false,
+        message: 'JWT_SECRET não configurado no ambiente'
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Adicionar dados do usuário à requisição
     req.userId = decoded.id;

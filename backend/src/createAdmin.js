@@ -14,11 +14,21 @@ async function ensureAdmin() {
   }
 
   const dbName = process.env.DB_NAME || 'barbearia_db';
+  if (!process.env.DB_USER) {
+    console.error('Missing DB_USER in environment variables');
+    process.exit(1);
+  }
+
+  if (!process.env.DB_PASSWORD) {
+    console.error('Missing DB_PASSWORD in environment variables');
+    process.exit(1);
+  }
+
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'aluno'
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD
   });
 
   await connection.query(`CREATE DATABASE IF NOT EXISTS ${dbName}`);
