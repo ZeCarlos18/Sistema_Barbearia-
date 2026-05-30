@@ -36,14 +36,17 @@ class AvailabilityService {
       }
 
       const occupied = await Appointment.getOccupiedTimes(barberId, date);
-      const unavailabilities = await Unavailability.findActiveUnavailabilities(barberId, date, '00:00');
+      const unavailabilities = await Unavailability.findActiveUnavailabilities(barberId, date, '09:00');
 
       const available = allTimes.filter(time => {
         if (occupied.includes(time)) return false;
         
         return !unavailabilities.some(unav => {
-          if (!unav.start_time || !unav.end_time) return true;
-          return time >= unav.start_time && time <= unav.end_time;
+          if (!unav.start_time && !unav.end_time) return true;
+          if (unav.start_time && unav.end_time) {
+            return time >= unav.start_time && time <= unav.end_time;
+          }
+          return false;
         });
       });
 

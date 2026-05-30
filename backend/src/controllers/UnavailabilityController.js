@@ -61,6 +61,9 @@ class UnavailabilityController {
 
   static async handleConflictingAppointments(barberId, appointments, action) {
     for (const apt of appointments) {
+      const dateStr = apt.date instanceof Date ? apt.date.toISOString().split('T')[0] : apt.date;
+      const timeStr = typeof apt.time === 'string' ? apt.time.substring(0, 5) : apt.time;
+      
       if (action === 'auto_cancel') {
         await Appointment.updateStatus(apt.id, 'cancelled');
         await Notification.create({
@@ -68,9 +71,8 @@ class UnavailabilityController {
           barberId,
           type: 'appointment_cancelled',
           title: 'Seu agendamento foi cancelado',
-          message: `Infelizmente, seu agendamento de ${apt.service_name} em ${apt.date} às ${apt.time} foi cancelado. Entraremos em contato em breve para remarcação.`,
-          relatedAppointmentId: apt.id,
-          status: 'unread'
+          message: `Infelizmente, seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} foi cancelado. Entraremos em contato em breve para remarcação.`,
+          relatedAppointmentId: apt.id
         });
       } else if (action === 'suggest_reschedule') {
         await Notification.create({
@@ -78,9 +80,8 @@ class UnavailabilityController {
           barberId,
           type: 'reschedule_suggestion',
           title: 'Sugestão de remarcação',
-          message: `Seu agendamento de ${apt.service_name} em ${apt.date} às ${apt.time} precisa ser remarcado. Acesse o app para escolher uma nova data.`,
-          relatedAppointmentId: apt.id,
-          status: 'unread'
+          message: `Seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} precisa ser remarcado. Acesse o app para escolher uma nova data.`,
+          relatedAppointmentId: apt.id
         });
       } else if (action === 'maintenance_warning') {
         await Notification.create({
@@ -88,9 +89,8 @@ class UnavailabilityController {
           barberId,
           type: 'maintenance_notice',
           title: 'Aviso importante',
-          message: `Seu agendamento de ${apt.service_name} em ${apt.date} às ${apt.time} está mantido. O barbeiro em breve entrará em contato com você.`,
-          relatedAppointmentId: apt.id,
-          status: 'unread'
+          message: `Seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} está mantido. O barbeiro em breve entrará em contato com você.`,
+          relatedAppointmentId: apt.id
         });
       }
     }
