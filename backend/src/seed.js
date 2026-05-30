@@ -10,11 +10,15 @@ async function seedDatabase() {
   console.log('🌱 Iniciando seed do banco de dados...\n');
   
   try {
+    if (!process.env.DB_USER || !process.env.DB_PASSWORD) {
+      throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
+    }
+
     const connection = await mysql.createConnection({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 3306,
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME || 'barbearia_db'
     });
 
@@ -26,18 +30,28 @@ async function seedDatabase() {
     // ============ SERVIÇOS ============
     console.log('📋 Inserindo serviços...');
     const services = [
-      { name: 'Barba', description: 'Aparação e modelagem de barba', price: 30.00, duration: 30 },
+      { name: 'Barba', description: 'Aparação e modelagem de barba', price: 25.00, duration: 30 },
       { name: 'Corte Degradê', description: 'Corte com degradê profissional', price: 50.00, duration: 45 },
       { name: 'Corte Social', description: 'Corte clássico e social', price: 40.00, duration: 40 }
     ];
 
+    let servicesInserted = 0;
     for (const service of services) {
-      await connection.query(
-        'INSERT INTO services (name, description, price, duration, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE id=id',
-        [service.name, service.description, service.price, service.duration]
+      // Verificar se o serviço já existe
+      const [existing] = await connection.query(
+        'SELECT id FROM services WHERE name = ?',
+        [service.name]
       );
+      
+      if (existing.length === 0) {
+        await connection.query(
+          'INSERT INTO services (name, description, price, duration, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
+          [service.name, service.description, service.price, service.duration]
+        );
+        servicesInserted++;
+      }
     }
-    console.log(`✅ ${services.length} serviços inseridos\n`);
+    console.log(`✅ ${servicesInserted} novo(s) serviço(s) inserido(s)\n`);
 
     // ============ BARBEIROS ============
     console.log('💈 Inserindo barbeiros...');
@@ -47,13 +61,23 @@ async function seedDatabase() {
       { name: 'Rafael', email: 'rafael@barber.com', phone: '11966666666' }
     ];
 
+    let barbersInserted = 0;
     for (const barber of barbers) {
-      await connection.query(
-        'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, "barber", NOW(), NOW()) ON DUPLICATE KEY UPDATE id=id',
-        [barber.name, barber.email, passwordHash, barber.phone]
+      // Verificar se o email já existe
+      const [existing] = await connection.query(
+        'SELECT id FROM users WHERE email = ?',
+        [barber.email]
       );
+      
+      if (existing.length === 0) {
+        await connection.query(
+          'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, "barber", NOW(), NOW())',
+          [barber.name, barber.email, passwordHash, barber.phone]
+        );
+        barbersInserted++;
+      }
     }
-    console.log(`✅ ${barbers.length} barbeiros inseridos\n`);
+    console.log(`✅ ${barbersInserted} novo(s) barbeiro(s) inserido(s)\n`);
 
     // ============ USUÁRIOS DE TESTE ============
     console.log('👥 Inserindo usuários de teste...');
@@ -62,13 +86,23 @@ async function seedDatabase() {
       { name: 'Cliente Teste', email: 'cliente@test.com', phone: '11988888800' }
     ];
 
+    let clientsInserted = 0;
     for (const client of clients) {
-      await connection.query(
-        'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, "client", NOW(), NOW()) ON DUPLICATE KEY UPDATE id=id',
-        [client.name, client.email, passwordHash, client.phone]
+      // Verificar se o email já existe
+      const [existing] = await connection.query(
+        'SELECT id FROM users WHERE email = ?',
+        [client.email]
       );
+      
+      if (existing.length === 0) {
+        await connection.query(
+          'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, "client", NOW(), NOW())',
+          [client.name, client.email, passwordHash, client.phone]
+        );
+        clientsInserted++;
+      }
     }
-    console.log(`✅ ${clients.length} usuários de teste inseridos\n`);
+    console.log(`✅ ${clientsInserted} novo(s) cliente(s) inserido(s)\n`);
 
     // ============ RESUMO ============
     console.log('═══════════════════════════════════════════');

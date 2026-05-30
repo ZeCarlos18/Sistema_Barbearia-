@@ -6,6 +6,10 @@ const AvailabilityService = require('../services/AvailabilityService');
 class AppointmentController {
   /**
    * Criar novo agendamento
+   * Permite múltiplos agendamentos por cliente, mas valida:
+   * - Horários duplicados para o mesmo barbeiro
+   * - Horários conflitantes considerando duração do serviço
+   * - Indisponibilidades do barbeiro
    */
   static async create(req, res) {
     try {
@@ -27,29 +31,21 @@ class AppointmentController {
         });
       }
 
-      // Verificar se o usuário já tem um agendamento ativo
-      const activeAppointments = await Appointment.findActiveByUserId(userId);
-      if (activeAppointments.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: 'Você já possui um agendamento ativo. Cancele o agendamento anterior antes de fazer um novo.'
-        });
-      }
-
-      // Verificar se o horário já está ocupado
+      // Verificar se o horário já está ocupado para o barbeiro
       const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
       if (occupiedTimes.includes(time)) {
         return res.status(409).json({
           success: false,
-          message: 'Horário já está ocupado para este barbeiro nesta data'
+          message: 'Horário duplicado: Este horário já está ocupado para este barbeiro nesta data'
         });
       }
 
+      // Verificar indisponibilidades do barbeiro
       const unavailabilities = await Unavailability.findActiveUnavailabilities(barberId, date, time);
       if (unavailabilities.length > 0) {
         return res.status(409).json({
           success: false,
-          message: 'Este horário está indisponível no momento'
+          message: 'Horário conflitante: Este horário está indisponível para este barbeiro no momento'
         });
       }
 
@@ -134,6 +130,43 @@ class AppointmentController {
       }
 
       const appointments = await Appointment.findByUserId(userId);
+
+      res.json({
+        success: true,
+        data: appointments
+      });
+    } catch (error) {
+      console.error('Erro ao listar agendamentos:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao listar agendamentos',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Listar agendamentos passados e futuros do usuário logado
+   * Seguindo RF23 - Visualizar Agendamentos Futuros e Passados
+   * Regras de Negócio:
+   * - Permite cliente visualizar seus próprios agendamentos
+   * - Exibe: data, horário, barbeiro responsável e status
+   * - Lista agendamentos passados e futuros
+   * - Organiza em ordem cronológica crescente
+   * - Exibe mensagem quando não houver agendamentos
+   */
+  static async findMyPastAndFutureAppointments(req, res) {
+    try {
+      const userId = req.userId;
+      
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado'
+        });
+      }
+
+      const appointments = await Appointment.findPastAndFutureByUserId(userId);
 
       res.json({
         success: true,
@@ -376,88 +409,6 @@ class AppointmentController {
       res.status(500).json({
         success: false,
         message: 'Erro ao cancelar agendamento',
-        error: error.message
-      });
-    }
-  }
-
-  /**
-   * Confirmar agendamento
-   * Segue as regras de negócio RF08:
-   * - O agendamento deve estar com status 'pending'
-   * - O horário deve estar disponível (nenhum outro agendamento no mesmo horário para o mesmo barbeiro)
-   * - O cliente não pode ter dois agendamentos no mesmo horário
-   */
-  static async confirm(req, res) {
-    try {
-      const { id } = req.params;
-
-      // Buscar agendamento
-      const appointment = await Appointment.findById(id);
-      if (!appointment) {
-        return res.status(404).json({
-          success: false,
-          message: 'Agendamento não encontrado'
-        });
-      }
-
-      // Validar se está com status 'pending'
-      if (appointment.status !== 'pending') {
-        return res.status(409).json({
-          success: false,
-          message: `Agendamento não pode ser confirmado. Status atual: ${appointment.status}`
-        });
-      }
-
-      // Validar se o horário ainda está disponível para o barbeiro
-      const occupiedTimes = await Appointment.getOccupiedTimes(appointment.barber_id, appointment.date);
-      if (occupiedTimes.includes(appointment.time)) {
-        return res.status(409).json({
-          success: false,
-          message: 'Horário já não está mais disponível para este barbeiro'
-        });
-      }
-
-      const unavailabilities = await Unavailability.findActiveUnavailabilities(
-        appointment.barber_id,
-        appointment.date,
-        appointment.time
-      );
-      if (unavailabilities.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: 'Este horário está indisponível no momento'
-        });
-      }
-
-      // Validar se o cliente não tem outro agendamento no mesmo horário
-      const userAppointmentsOnDate = await Appointment.findByUserAndDate(
-        appointment.user_id,
-        appointment.date
-      );
-      const conflictingAppointment = userAppointmentsOnDate.find(
-        (apt) => apt.time === appointment.time && Number(apt.id) !== Number(id) && apt.status !== 'cancelled'
-      );
-      if (conflictingAppointment) {
-        return res.status(409).json({
-          success: false,
-          message: 'Cliente já possui outro agendamento neste horário'
-        });
-      }
-
-      // Confirmar agendamento
-      const confirmedAppointment = await Appointment.updateStatus(id, 'confirmed');
-
-      res.json({
-        success: true,
-        message: 'Agendamento confirmado com sucesso',
-        data: confirmedAppointment
-      });
-    } catch (error) {
-      console.error('Erro ao confirmar agendamento:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao confirmar agendamento',
         error: error.message
       });
     }

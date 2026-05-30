@@ -3,6 +3,7 @@ const router = express.Router();
 const AuthController = require('../controllers/AuthController');
 const {
   authenticate,
+  requireAdmin,
   validateRequiredFields,
   validateEmail,
   validatePassword
@@ -84,6 +85,6 @@ router.get('/profile',
  * Rota para listar todos os usuários (para testes)
  * GET /api/auth/users
  */
-router.get('/users', AuthController.getAllUsers);
+router.get('/users', authenticate, requireAdmin, AuthController.getAllUsers);
 
 module.exports = router;

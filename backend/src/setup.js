@@ -9,11 +9,15 @@ async function setupDatabase() {
   console.log('🔧 Inicializando banco de dados...');
   
   try {
+    if (!process.env.DB_USER || !process.env.DB_PASSWORD) {
+      throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
+    }
+
     // Conectar sem especificar banco de dados
     const connection = await mysql.createConnection({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 3306,
-      user: process.env.DB_USER || 'root',
+      user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
     });
 

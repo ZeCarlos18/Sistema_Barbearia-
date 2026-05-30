@@ -2,11 +2,15 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Configuração da pool de conexão com MySQL
+if (!process.env.DB_USER || !process.env.DB_PASSWORD) {
+  throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
+}
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'barbearia_db',
   waitForConnections: true,
   connectionLimit: 10,

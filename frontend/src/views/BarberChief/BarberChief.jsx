@@ -1,7 +1,8 @@
 import React from 'react';
-import { FiBell, FiCalendar, FiHome, FiLogOut, FiPlus, FiUser } from 'react-icons/fi';
-import { fetchAppointmentsByDate, confirmAppointment } from '../../services/dashboardService';
-import { fetchServices } from '../../services/bookingService';
+import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLock, FiLogOut, FiPlus, FiUser, FiUserX } from 'react-icons/fi';
+import { fetchAppointmentsByDate } from '../../services/dashboardService';
+import { createAppointment, fetchServices } from '../../services/bookingService';
+import { createUnavailability, fetchBarberSchedule, fetchBarberUnavailabilities, updateAppointmentStatus } from '../../services/availabilityService';
 import './BarberChief.css';
 
 function getStoredUser() {
@@ -17,10 +18,42 @@ function getStoredUser() {
   }
 }
 
-export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
+function normalizeDateValue(value) {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString().split('T')[0];
+  return String(value).split('T')[0];
+}
+
+function normalizeTimeValue(value) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+  const str = String(value);
+  return str.length >= 5 ? str.slice(0, 5) : str;
+}
+
+function buildTimeSlots(startHour = 9, endHour = 19, intervalMinutes = 30) {
+  const slots = [];
+  for (let hour = startHour; hour < endHour; hour += 1) {
+    for (let minutes = 0; minutes < 60; minutes += intervalMinutes) {
+      slots.push(`${String(hour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+    }
+  }
+  return slots;
+}
+
+function formatMonthYearLabel(date) {
+  const formatted = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return formatted.replace(' de ', ' ').replace(/^./, (letter) => letter.toUpperCase());
+}
+
+export default function BarberChief({ onOpenCreate, onLogout }) {
   const user = getStoredUser();
   const displayName = user.name || 'Lucas';
-  const barberId = user.id;
+  const barberId = user.id || user.userId || user.barberId || user._id;
   const [activeNav, setActiveNav] = React.useState('home');
   const [selectedDate, setSelectedDate] = React.useState(() => {
     const today = new Date();
@@ -31,11 +64,31 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
   const [metrics, setMetrics] = React.useState({
     appointments: 0,
     profit: 0,
-    complaints: 0
+    remaining: 0
   });
   const [agendaItems, setAgendaItems] = React.useState([]);
   const [status, setStatus] = React.useState({ loading: false, error: '' });
-  const [confirmingId, setConfirmingId] = React.useState(null);
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+  const [profileView, setProfileView] = React.useState('menu');
+  const [availabilityView, setAvailabilityView] = React.useState('calendar');
+  const [availabilityMonth, setAvailabilityMonth] = React.useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [availabilityDate, setAvailabilityDate] = React.useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+      today.getDate()
+    ).padStart(2, '0')}`;
+  });
+  const [availabilityStatus, setAvailabilityStatus] = React.useState({ loading: false, error: '' });
+  const [availabilityAppointments, setAvailabilityAppointments] = React.useState([]);
+  const [availabilityUnavailabilities, setAvailabilityUnavailabilities] = React.useState([]);
+  const [availabilityAction, setAvailabilityAction] = React.useState({ loading: false, error: '', success: '' });
+  const [availabilityRefresh, setAvailabilityRefresh] = React.useState(0);
+  const [selectedSlot, setSelectedSlot] = React.useState(null);
+  const [rescheduleTarget, setRescheduleTarget] = React.useState(null);
+  const [rescheduleTime, setRescheduleTime] = React.useState('');
 
   React.useEffect(() => {
     let isMounted = true;
@@ -65,19 +118,18 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
         const completedAppointments = barberAppointments.filter((item) =>
           ['confirmed', 'completed'].includes(String(item.status || '').toLowerCase())
         );
-        const cancelledAppointments = barberAppointments.filter(
-          (item) => String(item.status || '').toLowerCase() === 'cancelled'
-        );
 
         const profitValue = completedAppointments.reduce((total, item) => {
           const price = serviceMap.get(String(item.service_id)) || 0;
           return total + price;
         }, 0);
 
+        const remainingCount = Math.max(activeAppointments.length - completedAppointments.length, 0);
+
         setMetrics({
           appointments: activeAppointments.length,
           profit: Math.round(profitValue),
-          complaints: cancelledAppointments.length
+          remaining: remainingCount
         });
 
         setAgendaItems(
@@ -103,24 +155,68 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
     };
   }, [selectedDate, barberId]);
 
+  React.useEffect(() => {
+    if (activeNav !== 'profile' && profileView !== 'menu') {
+      setProfileView('menu');
+      setAvailabilityView('calendar');
+    }
+  }, [activeNav, profileView]);
+
+  React.useEffect(() => {
+    if (activeNav !== 'profile' || profileView !== 'availability' || !barberId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadAvailability() {
+      setAvailabilityStatus({ loading: true, error: '' });
+      setAvailabilityAction({ loading: false, error: '', success: '' });
+
+      try {
+        const [appointments, unavailabilities] = await Promise.all([
+          fetchBarberSchedule(barberId, availabilityDate),
+          fetchBarberUnavailabilities(barberId)
+        ]);
+
+        if (!isMounted) return;
+
+        setAvailabilityAppointments(Array.isArray(appointments) ? appointments : []);
+        setAvailabilityUnavailabilities(Array.isArray(unavailabilities) ? unavailabilities : []);
+        setAvailabilityStatus({ loading: false, error: '' });
+      } catch (error) {
+        if (!isMounted) return;
+        setAvailabilityStatus({ loading: false, error: error.message || 'Erro ao carregar disponibilidade.' });
+      }
+    }
+
+    loadAvailability();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeNav, profileView, availabilityDate, barberId, availabilityRefresh]);
+
+  React.useEffect(() => {
+    if (profileView === 'availability') {
+      setSelectedSlot(null);
+      setRescheduleTarget(null);
+      setRescheduleTime('');
+    }
+  }, [availabilityDate, profileView]);
+
   function handleNavClick(id) {
     if (id === 'create') {
+      setActiveNav('create');
       onOpenCreate?.();
       return;
     }
 
     setActiveNav(id);
-    onNavigate?.(id);
   }
 
-  function changeDate(days) {
-    const [year, month, day] = selectedDate.split('-').map(Number);
-    const current = new Date(year, month - 1, day);
-    current.setDate(current.getDate() + days);
-    const newDate = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(
-      current.getDate()
-    ).padStart(2, '0')}`;
-    setSelectedDate(newDate);
+  function formatDateValue(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   function formatDateDisplay(dateStr) {
@@ -131,177 +227,837 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
     return `${weekdays[date.getDay()]}, ${day} de ${months[date.getMonth()]}`;
   }
 
-  async function handleConfirmAppointment(appointmentId) {
-    setConfirmingId(appointmentId);
-    try {
-      await confirmAppointment(appointmentId);
-      // Recarregar agendamentos após confirmação
-      setAgendaItems(prevItems =>
-        prevItems.map(item =>
-          item.id === appointmentId ? { ...item, status: 'confirmed' } : item
-        )
-      );
-    } catch (error) {
-      alert(`Erro ao confirmar: ${error.message}`);
-    } finally {
-      setConfirmingId(null);
+  function timeToMinutes(timeStr) {
+    const [hours, minutes] = timeStr.split(':').map((value) => Number(value));
+    return (hours || 0) * 60 + (minutes || 0);
+  }
+
+  function getAgendaWeekDates(dateStr) {
+    const baseDate = new Date(dateStr);
+    baseDate.setHours(0, 0, 0, 0);
+    const start = new Date(baseDate);
+    start.setDate(baseDate.getDate() - baseDate.getDay());
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      return day;
+    });
+  }
+
+  function handleAgendaDaySelect(date) {
+    setSelectedDate(formatDateValue(date));
+  }
+
+  function handleAgendaWeekShift(offsetWeeks) {
+    const baseDate = new Date(selectedDate);
+    baseDate.setDate(baseDate.getDate() + offsetWeeks * 7);
+    setSelectedDate(formatDateValue(baseDate));
+  }
+
+  function formatAgendaSummary(dateStr, count) {
+    const date = new Date(dateStr);
+    const weekdays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
+    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    const dayLabel = String(date.getDate()).padStart(2, '0');
+    return `${weekdays[date.getDay()]} ${dayLabel} ${months[date.getMonth()]} - ${count} HORARIOS`;
+  }
+
+  function handleOpenAvailability() {
+    setProfileView('availability');
+    setAvailabilityView('calendar');
+  }
+
+  function handleBackToSettings() {
+    setProfileView('menu');
+    setAvailabilityView('calendar');
+  }
+
+  function handleAvailabilityDateSelect(day) {
+    const year = availabilityMonth.getFullYear();
+    const month = availabilityMonth.getMonth() + 1;
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    setAvailabilityDate(dateStr);
+    setSelectedSlot(null);
+    setRescheduleTarget(null);
+    setRescheduleTime('');
+  }
+
+  function changeAvailabilityMonth(offset) {
+    setAvailabilityMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
+  }
+
+  function isDayUnavailable(dateStr) {
+    return availabilityUnavailabilities.some((unav) => {
+      const startDate = normalizeDateValue(unav.start_date || unav.startDate);
+      const endDate = normalizeDateValue(unav.end_date || unav.endDate);
+      if (!startDate || !endDate) return false;
+
+      const startTime = normalizeTimeValue(unav.start_time || unav.startTime);
+      const endTime = normalizeTimeValue(unav.end_time || unav.endTime);
+      if (startTime || endTime) return false;
+
+      return dateStr >= startDate && dateStr <= endDate;
+    });
+  }
+
+  function isSlotUnavailable(dateStr, timeStr) {
+    return availabilityUnavailabilities.some((unav) => {
+      const startDate = normalizeDateValue(unav.start_date || unav.startDate);
+      const endDate = normalizeDateValue(unav.end_date || unav.endDate);
+      if (!startDate || !endDate) return false;
+
+      if (dateStr < startDate || dateStr > endDate) return false;
+
+      const startTime = normalizeTimeValue(unav.start_time || unav.startTime);
+      const endTime = normalizeTimeValue(unav.end_time || unav.endTime);
+      if (!startTime && !endTime) return true;
+
+      if (!startTime || !endTime) return true;
+
+      return timeStr >= startTime && timeStr <= endTime;
+    });
+  }
+
+  const availabilitySlots = React.useMemo(() => {
+    const times = buildTimeSlots();
+    const appointmentsByTime = new Map(
+      availabilityAppointments.map((appointment) => [
+        normalizeTimeValue(appointment.time),
+        appointment
+      ])
+    );
+
+    return times.map((time) => {
+      const appointment = appointmentsByTime.get(time) || null;
+      const unavailable = isSlotUnavailable(availabilityDate, time);
+      const status = appointment ? 'booked' : unavailable ? 'disabled' : 'available';
+
+      return {
+        time,
+        status,
+        appointment
+      };
+    });
+  }, [availabilityAppointments, availabilityDate, availabilityUnavailabilities]);
+
+  function handleSlotSelect(slot) {
+    setSelectedSlot(slot);
+    setAvailabilityAction((prev) => ({ ...prev, error: '', success: '' }));
+
+    if (rescheduleTarget) {
+      if (slot.status !== 'available') {
+        setAvailabilityAction((prev) => ({
+          ...prev,
+          error: 'Selecione um horario disponivel para remarcar.'
+        }));
+        return;
+      }
+
+      if (normalizeTimeValue(rescheduleTarget.time) === slot.time) {
+        setAvailabilityAction((prev) => ({
+          ...prev,
+          error: 'Escolha um horario diferente do atual.'
+        }));
+        return;
+      }
+
+      setRescheduleTime(slot.time);
     }
   }
+
+  async function handleDisableDay() {
+    if (!barberId || availabilityAction.loading) {
+      setAvailabilityAction({
+        loading: false,
+        error: 'Não foi possível identificar o barbeiro logado.',
+        success: ''
+      });
+      return;
+    }
+    const confirmDisable = window.confirm('Deseja indisponibilizar este dia inteiro?');
+    if (!confirmDisable) return;
+
+    setAvailabilityAction({ loading: true, error: '', success: '' });
+    try {
+      await createUnavailability({
+        barberId,
+        startDate: availabilityDate,
+        endDate: availabilityDate,
+        startTime: null,
+        endTime: null,
+        reason: 'Dia indisponivel',
+        action: 'suggest_reschedule'
+      });
+      setAvailabilityAction({ loading: false, error: '', success: 'Dia indisponibilizado.' });
+      setAvailabilityRefresh((prev) => prev + 1);
+    } catch (error) {
+      setAvailabilityAction({ loading: false, error: error.message || 'Erro ao indisponibilizar dia.', success: '' });
+    }
+  }
+
+  async function handleDisableSlot() {
+    if (!barberId || !selectedSlot || availabilityAction.loading) return;
+
+    const hasAppointment = Boolean(selectedSlot.appointment);
+    const confirmDisable = window.confirm(
+      hasAppointment
+        ? 'Esse horario possui agendamento. Cancelar e desativar horario?'
+        : 'Deseja desativar este horario?'
+    );
+
+    if (!confirmDisable) return;
+
+    setAvailabilityAction({ loading: true, error: '', success: '' });
+    try {
+      if (hasAppointment) {
+        await updateAppointmentStatus(selectedSlot.appointment.id, 'cancelled');
+      }
+
+      await createUnavailability({
+        barberId,
+        startDate: availabilityDate,
+        endDate: availabilityDate,
+        startTime: selectedSlot.time,
+        endTime: selectedSlot.time,
+        reason: 'Horario desativado',
+        action: 'maintenance_warning'
+      });
+
+      setAvailabilityAction({ loading: false, error: '', success: 'Horario desativado.' });
+      setSelectedSlot(null);
+      setAvailabilityRefresh((prev) => prev + 1);
+    } catch (error) {
+      setAvailabilityAction({ loading: false, error: error.message || 'Erro ao desativar horario.', success: '' });
+    }
+  }
+
+  async function handleCancelAppointment(appointmentId) {
+    if (!appointmentId || availabilityAction.loading) return;
+    const confirmCancel = window.confirm('Cancelar este agendamento?');
+    if (!confirmCancel) return;
+
+    setAvailabilityAction({ loading: true, error: '', success: '' });
+    try {
+      await updateAppointmentStatus(appointmentId, 'cancelled');
+      setAvailabilityAction({ loading: false, error: '', success: 'Agendamento cancelado.' });
+      setSelectedSlot(null);
+      setAvailabilityRefresh((prev) => prev + 1);
+    } catch (error) {
+      setAvailabilityAction({ loading: false, error: error.message || 'Erro ao cancelar agendamento.', success: '' });
+    }
+  }
+
+  function handleStartReschedule(appointment) {
+    setRescheduleTarget(appointment);
+    setRescheduleTime('');
+    setAvailabilityAction({ loading: false, error: '', success: '' });
+  }
+
+  function handleCancelReschedule() {
+    setRescheduleTarget(null);
+    setRescheduleTime('');
+  }
+
+  async function handleConfirmReschedule() {
+    if (!rescheduleTarget || !rescheduleTime || availabilityAction.loading) return;
+
+    setAvailabilityAction({ loading: true, error: '', success: '' });
+    try {
+      const userId = rescheduleTarget.user_id || rescheduleTarget.userId;
+      const serviceId = rescheduleTarget.service_id || rescheduleTarget.serviceId;
+
+      await createAppointment({
+        userId,
+        barberId,
+        serviceId,
+        date: availabilityDate,
+        time: rescheduleTime
+      });
+
+      await updateAppointmentStatus(rescheduleTarget.id, 'cancelled');
+
+      setAvailabilityAction({ loading: false, error: '', success: 'Agendamento remarcado.' });
+      setRescheduleTarget(null);
+      setRescheduleTime('');
+      setSelectedSlot(null);
+      setAvailabilityRefresh((prev) => prev + 1);
+    } catch (error) {
+      setAvailabilityAction({ loading: false, error: error.message || 'Erro ao remarcar.', success: '' });
+    }
+  }
+
+  function renderAvailabilityCalendar() {
+    const year = availabilityMonth.getFullYear();
+    const month = availabilityMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+    const weeks = [];
+    let currentDate = new Date(startDate);
+
+    for (let i = 0; i < 6; i++) {
+      const week = [];
+      for (let j = 0; j < 7; j++) {
+        week.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    return weeks.map((week, weekIdx) => (
+      <div key={weekIdx} className="chief-calendar-row">
+        {week.map((date, dayIdx) => {
+          const isCurrentMonth = date.getMonth() === month;
+          const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          const isSelected = dateStr === availabilityDate;
+          const isToday = dateStr === todayStr;
+          const isUnavailable = isDayUnavailable(dateStr);
+
+          return (
+            <button
+              key={dayIdx}
+              type="button"
+              onClick={() => handleAvailabilityDateSelect(date.getDate())}
+              disabled={!isCurrentMonth}
+              className={`chief-calendar-day ${isSelected ? 'is-selected' : ''} ${isToday ? 'is-today' : ''} ${isUnavailable ? 'is-unavailable' : ''} ${!isCurrentMonth ? 'is-outside' : ''}`}
+            >
+              {date.getDate()}
+            </button>
+          );
+        })}
+      </div>
+    ));
+  }
+
+  const agendaWeekDates = React.useMemo(() => getAgendaWeekDates(selectedDate), [selectedDate]);
+
+  const agendaMonthLabel = React.useMemo(() => {
+    const date = new Date(selectedDate);
+    return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  }, [selectedDate]);
+
+  const agendaSortedItems = React.useMemo(() => {
+    const todayStr = formatDateValue(new Date());
+    const selectedMinutes = selectedDate === todayStr ? timeToMinutes(normalizeTimeValue(new Date())) : null;
+
+    return [...agendaItems].sort((a, b) => {
+      const minutesA = timeToMinutes(a.time);
+      const minutesB = timeToMinutes(b.time);
+
+      if (selectedMinutes === null) {
+        return minutesA - minutesB;
+      }
+
+      const distanceA = minutesA >= selectedMinutes ? minutesA - selectedMinutes : minutesA + 24 * 60 - selectedMinutes;
+      const distanceB = minutesB >= selectedMinutes ? minutesB - selectedMinutes : minutesB + 24 * 60 - selectedMinutes;
+
+      if (distanceA !== distanceB) {
+        return distanceA - distanceB;
+      }
+
+      return minutesA - minutesB;
+    });
+  }, [agendaItems, selectedDate]);
+
+  const agendaTimeline = React.useMemo(() => {
+    return agendaSortedItems.map((item) => ({ type: 'appointment', ...item }));
+  }, [agendaSortedItems]);
+
+  const agendaSummary = React.useMemo(
+    () => formatAgendaSummary(selectedDate, agendaTimeline.length),
+    [selectedDate, agendaTimeline.length]
+  );
+
+  const isProfile = activeNav === 'profile';
+  const isAgenda = activeNav === 'agenda';
+  const isProfileAvailability = isProfile && profileView === 'availability';
+  const isProfileMenu = isProfile && profileView === 'menu';
 
   return (
     <div className="chief-page">
       <div className="chief-stage">
-        <span className="chief-stage-title">PAINEL BARBEIRO</span>
+        <span className="chief-stage-title">
+          {activeNav === 'agenda'
+            ? 'PAINEL DE AGENDA BARBEIRO'
+            : activeNav === 'profile'
+              ? 'CONFIGURACAO BARBEIRO'
+              : 'PAINEL BARBEIRO'}
+        </span>
 
         <div className="chief-phone">
           <div className="chief-shell">
-            <header className="chief-header">
-              <div className="chief-profile">
-                <div className="chief-avatar" aria-hidden="true" />
-                <div className="chief-greeting">
-                  <span>Bem-vindo</span>
-                  <strong>{displayName}</strong>
-                </div>
-              </div>
+            <header className={`chief-header ${isProfile ? 'chief-header--profile' : ''} ${isProfileAvailability ? 'chief-header--subview' : ''}`}>
+              {isProfileAvailability ? (
+                <>
+                  <button className="chief-header-back" type="button" onClick={handleBackToSettings} aria-label="Voltar">
+                    <FiChevronLeft size={18} />
+                  </button>
+                  <h1 className="chief-header-title">Gerenciar Disponibilidade</h1>
+                  <span className="chief-header-spacer" aria-hidden="true" />
+                </>
+              ) : isProfileMenu ? (
+                <h1 className="chief-header-title">Configuracoes</h1>
+              ) : isAgenda ? (
+                <>
+                  <div className="chief-profile chief-profile--agenda">
+                    <div className="chief-avatar" aria-hidden="true" />
+                    <div className="chief-greeting chief-greeting--agenda">
+                      <span>Barbeiro - {displayName}</span>
+                      <strong>Minha Agenda</strong>
+                    </div>
+                  </div>
 
-              <div className="chief-actions">
-                <button className="chief-notify" type="button" aria-label="Notificações">
-                  <FiBell size={18} />
-                </button>
-                <button className="chief-logout" type="button" onClick={onLogout}>
-                  <FiLogOut size={18} />
-                </button>
-              </div>
+                  <div className="chief-actions">
+                    <button className="chief-icon-btn" type="button" aria-label="Notificacoes">
+                      <FiBell size={18} />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="chief-profile">
+                    <div className="chief-avatar" aria-hidden="true" />
+                    <div className="chief-greeting">
+                      <span>Bem-Vindo</span>
+                      <strong>{displayName}</strong>
+                    </div>
+                  </div>
+
+                  <div className="chief-actions">
+                    <button className="chief-icon-btn" type="button" aria-label="Notificacoes">
+                      <FiBell size={18} />
+                    </button>
+                  </div>
+                </>
+              )}
             </header>
 
             <main className="chief-main">
-              <section className="chief-metrics">
-                <div className="chief-metric-card">
-                  <span className="chief-metric-value">{metrics.appointments}</span>
-                  <span className="chief-metric-label">Atendimentos hoje</span>
-                </div>
-                <div className="chief-metric-card">
-                  <span className="chief-metric-value">R${metrics.profit}</span>
-                  <span className="chief-metric-label">Lucro do dia</span>
-                </div>
-                <div className="chief-metric-card">
-                  <span className="chief-metric-value">{metrics.complaints}</span>
-                  <span className="chief-metric-label">Reclamações</span>
-                </div>
-              </section>
+              {activeNav === 'home' && (
+                <>
+                  <section className="chief-metrics">
+                    <div className="chief-metric-card">
+                      <span className="chief-metric-value">{metrics.appointments}</span>
+                      <span className="chief-metric-label">ATENDIMENTOS HOJE</span>
+                    </div>
+                    <div className="chief-metric-card">
+                      <span className="chief-metric-value">R${metrics.profit}</span>
+                      <span className="chief-metric-label">LUCRO DO DIA</span>
+                    </div>
+                    <div className="chief-metric-card">
+                      <span className="chief-metric-value">{metrics.remaining}</span>
+                      <span className="chief-metric-label">RESTANTES</span>
+                    </div>
+                  </section>
 
-              <section className="chief-agenda">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <button 
-                    type="button"
-                    onClick={() => changeDate(-1)}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: 'transparent',
-                      border: '1px solid #d4af37',
-                      color: '#d4af37',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '14px'
-                    }}
-                  >
-                    ← Anterior
-                  </button>
-                  <h2 className="chief-agenda-title">{formatDateDisplay(selectedDate)}</h2>
-                  <button 
-                    type="button"
-                    onClick={() => changeDate(1)}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: 'transparent',
-                      border: '1px solid #d4af37',
-                      color: '#d4af37',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '14px'
-                    }}
-                  >
-                    Próximo →
-                  </button>
-                </div>
-                <div className="chief-agenda-list">
-                  {status.loading ? (
-                    <div className="chief-empty">Carregando agenda...</div>
-                  ) : null}
-                  {status.error ? (
-                    <div className="chief-empty">{status.error}</div>
-                  ) : null}
-                  {!status.loading && !status.error && agendaItems.length === 0 ? (
-                    <div className="chief-empty">Nenhum agendamento nesta data.</div>
-                  ) : null}
-                  {!status.loading && !status.error
-                    ? agendaItems.map((item) => (
-                        <article key={item.id} className="chief-agenda-item" style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1 }}>
+                  <section className="chief-agenda">
+                    <h2 className="chief-section-title">Agenda do dia</h2>
+                    <div className="chief-agenda-list">
+                      {status.loading && (
+                        <div className="chief-empty">Carregando agenda...</div>
+                      )}
+                      {status.error && (
+                        <div className="chief-empty">{status.error}</div>
+                      )}
+                      {!status.loading && !status.error && agendaItems.length === 0 && (
+                        <div className="chief-empty">Nenhum agendamento nesta data.</div>
+                      )}
+                      {!status.loading && !status.error && agendaSortedItems.length > 0 &&
+                        agendaSortedItems.map((item) => (
+                          <article key={item.id} className="chief-agenda-item">
                             <span className="chief-agenda-time">{item.time}</span>
                             <div className="chief-agenda-info">
                               <strong>{item.name}</strong>
                               <span>{item.service}</span>
                             </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              backgroundColor: item.status === 'pending' ? '#fed7aa' : '#bbf7d0',
-                              color: item.status === 'pending' ? '#7c2d12' : '#065f46'
-                            }}>
-                              {item.status === 'pending' ? 'Pendente' : 'Confirmado'}
-                            </span>
-                            {item.status === 'pending' && (
-                              <button
-                                type="button"
-                                onClick={() => handleConfirmAppointment(item.id)}
-                                disabled={confirmingId === item.id}
-                                style={{
-                                  padding: '6px 12px',
-                                  backgroundColor: '#d4af37',
-                                  color: '#1a1a1a',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: confirmingId === item.id ? 'not-allowed' : 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 'bold',
-                                  opacity: confirmingId === item.id ? 0.6 : 1
-                                }}
-                              >
-                                {confirmingId === item.id ? 'Confirmando...' : 'Confirmar'}
-                              </button>
-                            )}
+                          </article>
+                        ))
+                      }
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {activeNav === 'agenda' && (
+                <section className="chief-agenda-screen">
+                  <div className="chief-agenda-card">
+                    <div className="chief-agenda-month">
+                      <button
+                        type="button"
+                        className="chief-agenda-nav"
+                        onClick={() => handleAgendaWeekShift(-1)}
+                        aria-label="Semana anterior"
+                      >
+                        <FiChevronLeft size={16} />
+                      </button>
+                      <span className="chief-agenda-month-label">{agendaMonthLabel}</span>
+                      <button
+                        type="button"
+                        className="chief-agenda-nav"
+                        onClick={() => handleAgendaWeekShift(1)}
+                        aria-label="Proxima semana"
+                      >
+                        <FiChevronRight size={16} />
+                      </button>
+                    </div>
+
+                    <div className="chief-agenda-weekdays">
+                      {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((day) => (
+                        <span key={day}>{day}</span>
+                      ))}
+                    </div>
+
+                    <div className="chief-agenda-week">
+                      {agendaWeekDates.map((date) => {
+                        const dateStr = formatDateValue(date);
+                        const isSelected = dateStr === selectedDate;
+                        const isToday = dateStr === formatDateValue(new Date());
+                        const isOutside = date.getMonth() !== new Date(selectedDate).getMonth();
+
+                        return (
+                          <button
+                            key={dateStr}
+                            type="button"
+                            className={`chief-agenda-day ${isSelected ? 'is-selected' : ''} ${isToday ? 'is-today' : ''} ${isOutside ? 'is-outside' : ''}`}
+                            onClick={() => handleAgendaDaySelect(date)}
+                          >
+                            {date.getDate()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="chief-agenda-summary">{agendaSummary}</div>
+
+                  <div className="chief-agenda-list">
+                    {status.loading && (
+                      <div className="chief-empty">Carregando agenda...</div>
+                    )}
+                    {status.error && (
+                      <div className="chief-empty">{status.error}</div>
+                    )}
+                    {!status.loading && !status.error && agendaTimeline.length === 0 && (
+                      <div className="chief-empty">Nenhum agendamento nesta data.</div>
+                    )}
+                    {!status.loading && !status.error && agendaTimeline.length > 0 && (
+                      agendaTimeline.map((item) => (
+                        <article
+                          key={item.id || `${item.type}-${item.time}`}
+                          className={`chief-agenda-row ${item.type === 'break' ? 'is-break' : ''}`}
+                        >
+                          <span className="chief-agenda-time">{item.time}</span>
+                          <div className="chief-agenda-info">
+                            <strong>{item.type === 'break' ? 'Intervalo' : item.name}</strong>
+                            <span>{item.type === 'break' ? 'Intervalo' : item.service}</span>
                           </div>
                         </article>
                       ))
-                    : null}
-                </div>
-              </section>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {isProfileMenu && (
+                <section className="chief-settings">
+                  <div className="chief-settings-user">
+                    <div className="chief-settings-avatar" aria-hidden="true" />
+                    <strong className="chief-settings-name">{displayName}</strong>
+                  </div>
+
+                  <div className="chief-settings-card">
+                    <button type="button" className="chief-settings-item">
+                      <div className="chief-settings-item-left">
+                        <span className="chief-settings-icon"><FiUser size={14} /></span>
+                        <span className="chief-settings-label">Editar Perfil</span>
+                      </div>
+                      <span className="chief-settings-end">
+                        <FiChevronRight className="chief-settings-chevron" size={16} />
+                      </span>
+                    </button>
+
+                    <button type="button" className="chief-settings-item">
+                      <div className="chief-settings-item-left">
+                        <span className="chief-settings-icon"><FiLock size={14} /></span>
+                        <span className="chief-settings-label">Alterar Senha</span>
+                      </div>
+                      <span className="chief-settings-end">
+                        <FiChevronRight className="chief-settings-chevron" size={16} />
+                      </span>
+                    </button>
+
+                    <div className="chief-settings-item chief-settings-item--toggle">
+                      <div className="chief-settings-item-left">
+                        <span className="chief-settings-icon"><FiBell size={14} /></span>
+                        <span className="chief-settings-label">Notificacoes</span>
+                      </div>
+                      <div className="chief-settings-end chief-toggle-wrap">
+                        <button
+                          type="button"
+                          className={`chief-toggle ${notificationsEnabled ? 'is-on' : ''}`}
+                          onClick={() => setNotificationsEnabled((prev) => !prev)}
+                          aria-pressed={notificationsEnabled}
+                          aria-label="Alternar notificacoes"
+                        >
+                          <span className="chief-toggle-thumb" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <button type="button" className="chief-settings-item" onClick={handleOpenAvailability}>
+                      <div className="chief-settings-item-left">
+                        <span className="chief-settings-icon"><FiCalendar size={14} /></span>
+                        <span className="chief-settings-label">Gerenciar Disponibilidade</span>
+                      </div>
+                      <span className="chief-settings-end">
+                        <FiChevronRight className="chief-settings-chevron" size={16} />
+                      </span>
+                    </button>
+
+                    <button type="button" className="chief-settings-item">
+                      <div className="chief-settings-item-left">
+                        <span className="chief-settings-icon"><FiUserX size={14} /></span>
+                        <span className="chief-settings-label">Desativar Barbeiros</span>
+                      </div>
+                      <span className="chief-settings-end">
+                        <FiChevronRight className="chief-settings-chevron" size={16} />
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="chief-settings-logout"
+                      onClick={onLogout}
+                    >
+                      <span>Sair da Conta</span>
+                      <FiLogOut size={16} />
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {isProfileAvailability && (
+                <section className="chief-availability">
+                  {availabilityView === 'calendar' && (
+                    <div className="chief-availability-card">
+                      <div className="chief-calendar-header">
+                        <button type="button" className="chief-calendar-nav" onClick={() => changeAvailabilityMonth(-1)}>
+                          <FiChevronLeft size={16} />
+                        </button>
+                        <h2 className="chief-calendar-title">
+                          {formatMonthYearLabel(availabilityMonth)}
+                        </h2>
+                        <button type="button" className="chief-calendar-nav" onClick={() => changeAvailabilityMonth(1)}>
+                          <FiChevronRight size={16} />
+                        </button>
+                      </div>
+
+                      <div className="chief-calendar-weekdays">
+                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((day) => (
+                          <span key={day}>{day}</span>
+                        ))}
+                      </div>
+
+                      <div className="chief-calendar-grid">
+                        {renderAvailabilityCalendar()}
+                      </div>
+
+                      <div className="chief-calendar-legend">
+                        <div className="chief-legend-item">
+                          <span className="chief-legend-dot is-available" />
+                          <span>Disponivel</span>
+                        </div>
+                        <div className="chief-legend-item">
+                          <span className="chief-legend-dot is-selected" />
+                          <span>Selecionado</span>
+                        </div>
+                        <div className="chief-legend-item">
+                          <span className="chief-legend-dot is-unavailable" />
+                          <span>Indisponivel</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {availabilityView === 'calendar' && (
+                    <div className="chief-availability-actions">
+                      <button type="button" className="chief-secondary-btn" onClick={() => setAvailabilityView('slots')}>
+                        Ver horarios
+                      </button>
+                      <button type="button" className="chief-danger-btn" onClick={handleDisableDay} disabled={availabilityAction.loading}>
+                        {availabilityAction.loading ? 'Indisponibilizando...' : 'Indisponibilizar dia'}
+                      </button>
+
+                      {(availabilityAction.loading || availabilityAction.error || availabilityAction.success) && (
+                        <div className={`chief-alert ${availabilityAction.error ? 'is-error' : 'is-success'}`}>
+                          {availabilityAction.loading
+                            ? 'Salvando indisponibilidade...'
+                            : availabilityAction.error || availabilityAction.success}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {availabilityView === 'slots' && (
+                    <div className="chief-availability-slots">
+                      <div className="chief-availability-top">
+                        <button type="button" className="chief-link-btn" onClick={() => setAvailabilityView('calendar')}>
+                          <FiChevronLeft size={14} />
+                          <span>Voltar</span>
+                        </button>
+                        <span className="chief-availability-date">{formatDateDisplay(availabilityDate)}</span>
+                      </div>
+
+                      <div className="chief-availability-daycard">
+                        <div>
+                          <span className="chief-availability-daycard-label">Dia selecionado</span>
+                          <strong>{formatDateDisplay(availabilityDate)}</strong>
+                        </div>
+                        <button type="button" className="chief-danger-btn" onClick={handleDisableDay}>
+                          Indisponibilizar dia
+                        </button>
+                      </div>
+
+                      {availabilityStatus.loading && (
+                        <div className="chief-empty">Carregando horarios...</div>
+                      )}
+                      {availabilityStatus.error && (
+                        <div className="chief-empty">{availabilityStatus.error}</div>
+                      )}
+
+                      {!availabilityStatus.loading && !availabilityStatus.error && (
+                        <div className="chief-slots-grid">
+                          {availabilitySlots.map((slot) => (
+                            <button
+                              key={slot.time}
+                              type="button"
+                              className={`chief-slot is-${slot.status} ${selectedSlot?.time === slot.time ? 'is-selected' : ''} ${rescheduleTime === slot.time ? 'is-reschedule' : ''}`}
+                              onClick={() => handleSlotSelect(slot)}
+                            >
+                              {slot.time}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {(availabilityAction.error || availabilityAction.success) && (
+                        <div className={`chief-alert ${availabilityAction.error ? 'is-error' : 'is-success'}`}>
+                          {availabilityAction.error || availabilityAction.success}
+                        </div>
+                      )}
+
+                      {rescheduleTarget && (
+                        <div className="chief-slot-detail">
+                          <div className="chief-slot-detail-title">Remarcar horario</div>
+                          <div className="chief-slot-detail-subtitle">
+                            {rescheduleTarget.user_name || 'Cliente'} • {normalizeTimeValue(rescheduleTarget.time)}
+                          </div>
+                          <p className="chief-slot-detail-hint">Selecione um novo horario disponivel.</p>
+                          <div className="chief-slot-actions">
+                            <button type="button" className="chief-secondary-btn" onClick={handleCancelReschedule}>
+                              Cancelar remarcacao
+                            </button>
+                            <button
+                              type="button"
+                              className="chief-primary-btn"
+                              onClick={handleConfirmReschedule}
+                              disabled={!rescheduleTime || availabilityAction.loading}
+                            >
+                              Salvar alteracao
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {!rescheduleTarget && selectedSlot?.appointment && (
+                        <div className="chief-slot-detail">
+                          <div className="chief-slot-detail-title">1 cliente neste horario</div>
+                          <div className="chief-slot-detail-subtitle">
+                            {selectedSlot.appointment.service_name || 'Servico'} • {selectedSlot.time}
+                          </div>
+                          <div className="chief-slot-detail-status">Confirmado</div>
+                          <p className="chief-slot-detail-hint">O que fazer com esse agendamento?</p>
+                          <div className="chief-slot-actions">
+                            <button
+                              type="button"
+                              className="chief-danger-btn"
+                              onClick={() => handleCancelAppointment(selectedSlot.appointment.id)}
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              className="chief-secondary-btn"
+                              onClick={() => handleStartReschedule(selectedSlot.appointment)}
+                            >
+                              Remarcar
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            className="chief-outline-btn"
+                            onClick={handleDisableSlot}
+                          >
+                            Desativar horario
+                          </button>
+                        </div>
+                      )}
+
+                      {!rescheduleTarget && selectedSlot && !selectedSlot.appointment && (
+                        <div className="chief-slot-detail">
+                          <div className="chief-slot-detail-title">
+                            {selectedSlot.status === 'disabled' ? 'Horario indisponivel' : 'Horario livre'}
+                          </div>
+                          <div className="chief-slot-detail-subtitle">{selectedSlot.time}</div>
+                          <button
+                            type="button"
+                            className="chief-outline-btn"
+                            onClick={handleDisableSlot}
+                          >
+                            Desativar horario
+                          </button>
+                        </div>
+                      )}
+
+                      {!rescheduleTarget && !selectedSlot && (
+                        <button type="button" className="chief-outline-btn" onClick={handleDisableDay}>
+                          Indisponibilizar dia inteiro
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </section>
+              )}
             </main>
 
             <nav className="chief-nav" aria-label="Navegacao principal">
               <button
                 type="button"
-                className={`chief-nav-btn ${activeNav === 'home' ? 'is-active' : ''}`}
+                className={`chief-nav-btn chief-nav-btn--home ${activeNav === 'home' ? 'is-active' : ''}`}
                 onClick={() => handleNavClick('home')}
               >
                 <FiHome size={18} />
+                <span>Home</span>
               </button>
 
               <button
                 type="button"
-                className={`chief-nav-btn ${activeNav === 'agenda' ? 'is-active' : ''}`}
+                className={`chief-nav-btn chief-nav-btn--agenda ${activeNav === 'agenda' ? 'is-active' : ''}`}
                 onClick={() => handleNavClick('agenda')}
+                aria-label="Agenda"
               >
                 <FiCalendar size={18} />
+                <span>Agenda</span>
               </button>
 
               <button
                 type="button"
-                className="chief-nav-btn chief-nav-btn--plus"
+                className={`chief-nav-btn chief-nav-btn--plus ${activeNav === 'create' ? 'is-active' : ''}`}
                 onClick={() => handleNavClick('create')}
                 aria-label="Cadastrar barbeiro"
               >
@@ -310,10 +1066,12 @@ export default function BarberChief({ onOpenCreate, onNavigate, onLogout }) {
 
               <button
                 type="button"
-                className={`chief-nav-btn ${activeNav === 'profile' ? 'is-active' : ''}`}
+                className={`chief-nav-btn chief-nav-btn--profile ${activeNav === 'profile' ? 'is-active' : ''}`}
                 onClick={() => handleNavClick('profile')}
+                aria-label="Perfil"
               >
                 <FiUser size={18} />
+                <span>Perfil</span>
               </button>
             </nav>
           </div>
