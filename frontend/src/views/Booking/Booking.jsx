@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Booking.css';
 import avatarImage from '../../assets/image.png';
+import AppointmentConfirmationModal from '../../components/Modal/AppointmentConfirmationModal';
 import {
   fetchServices,
   fetchBarbers,
@@ -98,6 +100,7 @@ function getServiceVariant(service, index) {
 }
 
 export default function Booking({ onBack }) {
+  const navigate = useNavigate();
   const [step, setStep] = React.useState(0);
   const [services, setServices] = React.useState([]);
   const [barbers, setBarbers] = React.useState([]);
@@ -123,6 +126,10 @@ export default function Booking({ onBack }) {
   const [confirming, setConfirming] = React.useState(false);
   const [successMessage, setSuccessMessage] = React.useState('');
   const [formError, setFormError] = React.useState('');
+
+  // Estados para o Modal de Confirmação
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationData, setConfirmationData] = useState(null);
 
   const today = React.useMemo(() => startOfDay(new Date()), []);
 
@@ -387,8 +394,20 @@ export default function Booking({ onBack }) {
 
       await createAppointment(payload);
 
-      setSuccessMessage('Agendamento realizado com sucesso!');
-      // limpar estado e voltar ao início
+      // Buscar informações do barbeiro e serviço selecionados para o modal
+      const selectedBarber = barberOptions.find(b => String(b.id) === String(selectedBarberId));
+      const selectedService = serviceOptions.find(s => String(s.id) === String(selectedServiceId));
+
+      // Abrir modal de confirmação
+      setConfirmationData({
+        barberName: selectedBarber?.name || 'Barbeiro',
+        serviceName: selectedService?.name || 'Serviço',
+        date: formatDateISO(selectedDate),
+        time: selectedTime
+      });
+      setShowConfirmation(true);
+
+      // Limpar estado e voltar ao início
       setSelectedServiceId('');
       setSelectedBarberId('');
       setSelectedTime('');
@@ -399,6 +418,14 @@ export default function Booking({ onBack }) {
     } finally {
       setConfirming(false);
     }
+  }
+
+  // Função para fechar o modal e redirecionar
+  function handleCloseConfirmation() {
+    setShowConfirmation(false);
+    setConfirmationData(null);
+    // Redirecionar para Home
+    navigate('/home');
   }
 
   const calendarMonthLabel = `${monthLabels[calendarMonth.getMonth()]} ${calendarMonth.getFullYear()}`;
@@ -821,6 +848,13 @@ export default function Booking({ onBack }) {
             </div>
           </div>
         </div>
+
+        {/* Modal de Confirmação de Agendamento */}
+        <AppointmentConfirmationModal
+          isOpen={showConfirmation}
+          onClose={handleCloseConfirmation}
+          appointmentData={confirmationData}
+        />
       </div>
     </div>
   );
