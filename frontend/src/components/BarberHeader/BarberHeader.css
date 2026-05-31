@@ -4,8 +4,14 @@
  */
 
 .barber-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   padding: 20px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: linear-gradient(160deg, #151515 0%, #0a0a0a 100%);
 }
 
 .barber-header__content {

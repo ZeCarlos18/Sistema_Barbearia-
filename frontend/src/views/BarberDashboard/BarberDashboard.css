@@ -8,7 +8,8 @@
   flex-direction: column;
   min-height: 100vh;
   background: linear-gradient(160deg, #151515 0%, #0a0a0a 100%);
-  padding-bottom: 80px; /* Espaço para BottomNav */
+  padding-top: 90px; /* Espaço para header fixo */
+  padding-bottom: 80px; /* Espaço para BottomNav fixo */
 }
 
 /* Seção de Stats (Cards) */
