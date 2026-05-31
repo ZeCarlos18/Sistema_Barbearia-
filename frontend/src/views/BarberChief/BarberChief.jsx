@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLock, FiLogOut, FiPlus, FiUser, FiUserX } from 'react-icons/fi';
 import { fetchAppointmentsByDate } from '../../services/dashboardService';
 import { createAppointment, fetchServices } from '../../services/bookingService';
@@ -51,10 +52,31 @@ function formatMonthYearLabel(date) {
 }
 
 export default function BarberChief({ onOpenCreate, onLogout }) {
+  const location = useLocation();
   const user = getStoredUser();
   const displayName = user.name || 'Lucas';
   const barberId = user.id || user.userId || user.barberId || user._id;
-  const [activeNav, setActiveNav] = React.useState('home');
+  const getInitialSection = React.useCallback(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+
+    if (section === 'availability') {
+      return { activeNav: 'profile', profileView: 'availability' };
+    }
+
+    if (section === 'menu') {
+      return { activeNav: 'profile', profileView: 'menu' };
+    }
+
+    if (section === 'agenda') {
+      return { activeNav: 'agenda', profileView: 'menu' };
+    }
+
+    return { activeNav: 'home', profileView: 'menu' };
+  }, [location.search]);
+
+  const initialSection = getInitialSection();
+  const [activeNav, setActiveNav] = React.useState(initialSection.activeNav);
   const [selectedDate, setSelectedDate] = React.useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
@@ -69,7 +91,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
   const [agendaItems, setAgendaItems] = React.useState([]);
   const [status, setStatus] = React.useState({ loading: false, error: '' });
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-  const [profileView, setProfileView] = React.useState('menu');
+  const [profileView, setProfileView] = React.useState(initialSection.profileView);
   const [availabilityView, setAvailabilityView] = React.useState('calendar');
   const [availabilityMonth, setAvailabilityMonth] = React.useState(() => {
     const today = new Date();
@@ -89,6 +111,31 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
   const [selectedSlot, setSelectedSlot] = React.useState(null);
   const [rescheduleTarget, setRescheduleTarget] = React.useState(null);
   const [rescheduleTime, setRescheduleTime] = React.useState('');
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+
+    if (section === 'availability') {
+      setActiveNav('profile');
+      setProfileView('availability');
+      return;
+    }
+
+    if (section === 'menu') {
+      setActiveNav('profile');
+      setProfileView('menu');
+      return;
+    }
+
+    if (section === 'agenda') {
+      setActiveNav('agenda');
+      setProfileView('menu');
+      return;
+    }
+
+    setActiveNav('home');
+  }, [location.search]);
 
   React.useEffect(() => {
     let isMounted = true;

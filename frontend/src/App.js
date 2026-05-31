@@ -64,6 +64,9 @@ function AppRoutes() {
 
   const handleBarberNavigate = (page) => {
     if (page === 'home') navigate('/barber-dashboard');
+    if (page === 'search') navigate('/barber-dashboard?tab=search');
+    if (page === 'calendar') navigate('/barber-chief?section=availability');
+    if (page === 'profile') navigate('/barber-chief?section=menu');
   };
 
   return (
@@ -116,6 +119,11 @@ function AppRoutes() {
       <Route path="/barber-dashboard" element={
         <ProtectedRoute allowedRoles={['barber', 'admin']}>
           <BarberDashboard onNavigate={handleBarberNavigate} />
+        </ProtectedRoute>
+      } />
+      <Route path="/barber-chief" element={
+        <ProtectedRoute allowedRoles={['barber', 'admin']}>
+          <BarberChief onOpenCreate={() => navigate('/barber-create')} onLogout={handleLogout} />
         </ProtectedRoute>
       } />
       <Route path="/barber-create" element={

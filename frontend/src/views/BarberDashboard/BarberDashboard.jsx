@@ -38,6 +38,21 @@ function BarberDashboard() {
       return;
     }
 
+    if (item === 'search') {
+      navigate('/barber-dashboard?tab=search');
+      return;
+    }
+
+    if (item === 'calendar') {
+      navigate('/barber-chief?section=availability');
+      return;
+    }
+
+    if (item === 'profile') {
+      navigate('/barber-chief?section=menu');
+      return;
+    }
+
     navigate(`/barber-dashboard?tab=${item}`);
   };
 
