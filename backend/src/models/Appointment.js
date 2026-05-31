@@ -12,21 +12,9 @@ class Appointment {
     const connection = await pool.getConnection();
     
     try {
-      // Buscar o preço do serviço
-      const [serviceRows] = await connection.query(
-        'SELECT price FROM services WHERE id = ?',
-        [serviceId]
-      );
-      
-      if (serviceRows.length === 0) {
-        throw new Error('SERVICE_NOT_FOUND');
-      }
-      
-      const price = serviceRows[0].price;
-      
       const [result] = await connection.query(
-        'INSERT INTO appointments (user_id, barber_id, service_id, price, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
-        [userId, barberId, serviceId, price, date, time]
+        'INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
+        [userId, barberId, serviceId, date, time]
       );
       
       return {
@@ -34,7 +22,6 @@ class Appointment {
         userId,
         barberId,
         serviceId,
-        price,
         date,
         time,
         status: 'confirmed',
@@ -128,7 +115,7 @@ class Appointment {
     
     try {
       const [rows] = await connection.query(`
-        SELECT a.*, u.name as user_name, u.email as user_email, s.name as service_name
+        SELECT a.*, s.price as service_price, u.name as user_name, u.email as user_email, s.name as service_name
         FROM appointments a
         LEFT JOIN users u ON a.user_id = u.id
         LEFT JOIN services s ON a.service_id = s.id
@@ -355,7 +342,7 @@ class Appointment {
     const connection = await pool.getConnection();
     try {
       const [rows] = await connection.query(`
-        SELECT a.*, u.name as user_name, u.phone as user_phone, u.email as user_email,
+        SELECT a.*, s.price as service_price, u.name as user_name, u.phone as user_phone, u.email as user_email,
                s.name as service_name, s.duration as service_duration
         FROM appointments a
         LEFT JOIN users u ON a.user_id = u.id
@@ -373,7 +360,7 @@ class Appointment {
     const connection = await pool.getConnection();
     try {
       const [rows] = await connection.query(`
-        SELECT a.*, u.name as user_name, u.phone as user_phone, u.email as user_email,
+        SELECT a.*, s.price as service_price, u.name as user_name, u.phone as user_phone, u.email as user_email,
                s.name as service_name, s.duration as service_duration
         FROM appointments a
         LEFT JOIN users u ON a.user_id = u.id

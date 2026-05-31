@@ -45,6 +45,13 @@ class BarberController {
         return aptDate.getTime() === today.getTime() && apt.status !== 'cancelled';
       });
 
+      const dailyProfit = todayAppointments.reduce((total, appointment) => {
+        const rawValue = appointment.service_price ?? appointment.price ?? 0;
+        const numericValue = Number(rawValue);
+
+        return total + (Number.isFinite(numericValue) ? numericValue : 0);
+      }, 0);
+
       const upcomingAppointments = appointments.filter(apt => {
         const aptDate = new Date(apt.date);
         aptDate.setHours(0, 0, 0, 0);
@@ -86,7 +93,8 @@ class BarberController {
               completedAppointments: completedAppointments.length,
               cancelledAppointments: cancelledAppointments.length,
               pendingAppointments: appointments.filter(apt => apt.status === 'pending').length,
-              confirmedAppointments: appointments.filter(apt => apt.status === 'confirmed').length
+              confirmedAppointments: appointments.filter(apt => apt.status === 'confirmed').length,
+              dailyProfit
             }
           },
           unavailabilities: activeUnavailabilities,

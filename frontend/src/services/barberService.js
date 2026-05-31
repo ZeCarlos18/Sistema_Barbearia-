@@ -15,9 +15,12 @@ import { apiFetch } from './apiClient';
  * // Retorna: { barberData: {...}, todaySchedule: [...] }
  */
 export async function getBarberDashboard(barberId) {
-  // Futuro: implementar chamada para /api/barber/:id/dashboard
-  // return apiFetch(`/api/barber/${barberId}/dashboard`);
-  throw new Error('Método não implementado ainda');
+  if (!barberId) {
+    throw new Error('ID do barbeiro é obrigatório');
+  }
+
+  const payload = await apiFetch(`/api/barber/${barberId}/dashboard`);
+  return payload.data;
 }
 
 /**
@@ -27,9 +30,16 @@ export async function getBarberDashboard(barberId) {
  * @returns {Promise<Array>} Array de agendamentos
  */
 export async function getBarberScheduleByDate(barberId, date) {
-  // Futuro: implementar chamada para /api/barber/:id/schedule
-  // return apiFetch(`/api/barber/${barberId}/schedule?date=${date}`);
-  throw new Error('Método não implementado ainda');
+  if (!barberId) {
+    throw new Error('ID do barbeiro é obrigatório');
+  }
+
+  if (!date) {
+    throw new Error('Data é obrigatória');
+  }
+
+  const payload = await apiFetch(`/api/appointments/schedule/${barberId}/date/${date}`);
+  return payload.data;
 }
 
 /**
@@ -39,6 +49,18 @@ export async function getBarberScheduleByDate(barberId, date) {
  * @returns {Promise<Object>} Agendamento atualizado
  */
 export async function updateAppointmentStatus(appointmentId, status) {
-  // Futuro: implementar chamada PUT para /api/appointments/:id/status
-  throw new Error('Método não implementado ainda');
+  if (!appointmentId) {
+    throw new Error('ID do agendamento é obrigatório');
+  }
+
+  if (!status) {
+    throw new Error('Status é obrigatório');
+  }
+
+  const payload = await apiFetch(`/api/appointments/${appointmentId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status })
+  });
+
+  return payload.data;
 }

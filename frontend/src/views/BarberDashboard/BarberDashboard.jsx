@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import BarberHeader from '../../components/BarberHeader/BarberHeader';
 import StatsCard from '../../components/StatsCard/StatsCard';
 import ScheduleList from '../../components/ScheduleList/ScheduleList';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import { mockBarberData, mockTodaySchedule } from '../../constants/mockData';
+import { mockBarberData } from '../../constants/mockData';
+import { useBarberData } from '../../hooks/useBarberData';
 import './BarberDashboard.css';
 
 /**
@@ -13,46 +15,30 @@ import './BarberDashboard.css';
  * @returns {JSX.Element} Dashboard completo do barbeiro
  */
 function BarberDashboard() {
-  // Estado para dados do barbeiro
-  const [barberData, setBarberData] = useState({
-    name: '',
-    avatar: '',
-    totalAppointmentsToday: 0,
-    dailyProfit: 0,
-    remainingAppointments: 0
-  });
-
-  // Estado para agendamentos do dia
-  const [todaySchedule, setTodaySchedule] = useState([]);
+  const { barberData, todaySchedule, isLoading, error } = useBarberData();
+  const safeBarberData = barberData || mockBarberData;
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Estado para navegação inferior
   const [activeNav, setActiveNav] = useState('home');
 
-  // Estados de carregamento e erro
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Efeito para carregar dados (agora com mock, depois com API)
   useEffect(() => {
-    setIsLoading(true);
-    try {
-      // Simulando delay de carregamento
-      setTimeout(() => {
-        setBarberData(mockBarberData);
-        setTodaySchedule(mockTodaySchedule);
-        setIsLoading(false);
-      }, 500);
-    } catch (err) {
-      setError('Erro ao carregar dados do barbeiro');
-      setIsLoading(false);
-    }
-  }, []);
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    setActiveNav(tab || 'home');
+  }, [location.search]);
 
   // Função para lidar com navegação
   const handleNavigate = (item) => {
     setActiveNav(item);
-    // Futura integração: redirecionar para página
-    console.log('Navegando para:', item);
+
+    if (item === 'home') {
+      navigate('/barber-dashboard');
+      return;
+    }
+
+    navigate(`/barber-dashboard?tab=${item}`);
   };
 
   // Função para lidar com clique em notificações
@@ -69,24 +55,24 @@ function BarberDashboard() {
     <div className="barber-dashboard">
       {/* Cabeçalho */}
       <BarberHeader
-        name={barberData.name}
-        avatar={barberData.avatar}
+        name={safeBarberData.name}
+        avatar={safeBarberData.avatar}
         onNotificationClick={handleNotificationClick}
       />
 
       {/* Cards de resumo */}
       <section className="stats-section">
         <StatsCard
-          value={barberData.totalAppointmentsToday}
+          value={safeBarberData.totalAppointmentsToday}
           label="Atendimentos hoje"
         />
         <StatsCard
-          value={`R$${barberData.dailyProfit}`}
+          value={`R$${safeBarberData.dailyProfit}`}
           label="Lucro do dia"
           variant="profit"
         />
         <StatsCard
-          value={barberData.remainingAppointments}
+          value={safeBarberData.remainingAppointments}
           label="Restantes"
           variant="remaining"
         />
@@ -101,7 +87,7 @@ function BarberDashboard() {
 
       {/* Navegação inferior */}
       <BottomNav
-        activeItem={activeNav}
+        active={activeNav}
         onNavigate={handleNavigate}
       />
     </div>

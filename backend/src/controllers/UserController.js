@@ -173,6 +173,7 @@ class UserController {
           name: user.name,
           email: user.email,
           phone: user.phone,
+          avatar: user.avatar,
           createdAt: user.created_at
         }
       });

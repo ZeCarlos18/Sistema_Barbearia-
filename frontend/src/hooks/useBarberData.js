@@ -1,6 +1,72 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { mockBarberData, mockTodaySchedule } from '../constants/mockData';
-// import { getBarberDashboard } from '../services/barberService'; // Futuro
+import { getBarberDashboard } from '../services/barberService';
+
+function getStoredUser() {
+  const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+
+  if (!stored) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(stored);
+  } catch (error) {
+    return null;
+  }
+}
+
+function formatTime(value) {
+  if (!value) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.slice(0, 5);
+  }
+
+  if (value instanceof Date) {
+    return value.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  return String(value).slice(0, 5);
+}
+
+function normalizeDashboardData(payload) {
+  const barber = payload?.barber || {};
+  const appointments = payload?.appointments || {};
+  const todayAppointments = Array.isArray(appointments.today) ? appointments.today : [];
+  const statistics = appointments.statistics || {};
+
+  const mappedSchedule = todayAppointments.map((appointment) => ({
+    id: appointment.id,
+    time: formatTime(appointment.time),
+    clientName: appointment.user_name || appointment.clientName || 'Cliente',
+    service: appointment.service_name || appointment.service || 'Serviço'
+  }));
+
+  const dailyProfitFromAppointments = todayAppointments.reduce((sum, appointment) => {
+    const rawValue = appointment.price ?? appointment.service_price ?? appointment.servicePrice ?? 0;
+    const numericValue = Number(rawValue);
+
+    return sum + (Number.isFinite(numericValue) ? numericValue : 0);
+  }, 0);
+
+  return {
+    barberData: {
+      id: barber.id ?? null,
+      name: barber.name || mockBarberData.name,
+      avatar: barber.avatar || mockBarberData.avatar,
+      totalAppointmentsToday: statistics.totalAppointmentsToday ?? todayAppointments.length,
+      dailyProfit: statistics.dailyProfit ?? dailyProfitFromAppointments,
+      remainingAppointments: statistics.remainingAppointments ?? todayAppointments.length
+    },
+    todaySchedule: mappedSchedule
+  };
+}
 
 /**
  * Hook customizado para gerenciar dados do barbeiro
@@ -21,38 +87,43 @@ export function useBarberData() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadBarberData();
-  }, []);
-
-  const loadBarberData = async () => {
+  const loadBarberData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      // AGORA: Usando dados mockados
-      // FUTURO: Descomente e use chamada API
-      // const response = await getBarberDashboard();
-      // setBarberData(response.barberData);
-      // setTodaySchedule(response.todaySchedule);
-      
-      // Simulando delay de rede
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+
+      const storedUser = getStoredUser();
+      const barberId = storedUser?.id;
+
+      if (!barberId) {
+        setBarberData(mockBarberData);
+        setTodaySchedule(mockTodaySchedule);
+        return;
+      }
+
+      const dashboard = await getBarberDashboard(barberId);
+      const normalizedDashboard = normalizeDashboardData(dashboard);
+
+      setBarberData(normalizedDashboard.barberData);
+      setTodaySchedule(normalizedDashboard.todaySchedule);
+    } catch (err) {
+      console.warn('Usando dados mockados do dashboard do barbeiro:', err);
       setBarberData(mockBarberData);
       setTodaySchedule(mockTodaySchedule);
-    } catch (err) {
-      setError(err.message || 'Erro ao carregar dados do barbeiro');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadBarberData();
+  }, [loadBarberData]);
 
   return { 
     barberData, 
     todaySchedule, 
     isLoading, 
     error,
-    refetch: loadBarberData // Permitir recarregar manualmente
+    refetch: loadBarberData
   };
 }

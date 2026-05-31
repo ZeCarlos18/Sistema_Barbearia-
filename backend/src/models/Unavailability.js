@@ -50,6 +50,12 @@ class Unavailability {
         [barberId]
       );
       return rows;
+    } catch (error) {
+      if (error.code === 'ER_NO_SUCH_TABLE') {
+        return [];
+      }
+
+      throw error;
     } finally {
       connection.release();
     }
