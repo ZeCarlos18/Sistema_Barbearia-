@@ -9,6 +9,7 @@ import Home from './views/Home/Home';
 import RecoverPassword from './views/RecoverPassword/RecoverPassword';
 import Booking from './views/Booking/Booking';
 import ClientSettings from './views/ClientSettings/ClientSettings';
+import BarberDashboard from './views/BarberDashboard/BarberDashboard';
 import BarberChief from './views/BarberChief/BarberChief';
 import BarberCreate from './views/BarberCreate/BarberCreate';
 import Appointments from './views/Appointments/Appointments';
@@ -114,7 +115,7 @@ function AppRoutes() {
       {/* --- ROTAS PRIVADAS (BARBEIROS E ADMIN) --- */}
       <Route path="/barber-dashboard" element={
         <ProtectedRoute allowedRoles={['barber', 'admin']}>
-          <BarberChief onOpenCreate={() => navigate('/barber-create')} onNavigate={handleBarberNavigate} onLogout={handleLogout} />
+          <BarberDashboard onNavigate={handleBarberNavigate} />
         </ProtectedRoute>
       } />
       <Route path="/barber-create" element={

@@ -239,7 +239,14 @@ class AppointmentController {
         });
       }
 
-      const availableTimes = await AvailabilityService.getAvailableSlots(barberId, date);
+      const allTimes = [];
+      for (let hour = 9; hour < 19; hour++) {
+        allTimes.push(`${hour.toString().padStart(2, '0')}:00`);
+        allTimes.push(`${hour.toString().padStart(2, '0')}:30`);
+      }
+
+      const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
+      const availableTimes = allTimes.filter(time => !occupiedTimes.includes(time));
 
       res.json({
         success: true,

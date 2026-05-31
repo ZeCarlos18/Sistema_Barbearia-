@@ -1,0 +1,82 @@
+/**
+ * Estilos do Cabeçalho do Barbeiro
+ * Exibe: avatar, boas-vindas, nome e notificações
+ */
+
+.barber-header {
+  padding: 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.barber-header__content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Avatar */
+.barber-header__avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #1a1a1a;
+  flex-shrink: 0;
+}
+
+/* Info (boas-vindas + nome) */
+.barber-header__info {
+  flex: 1;
+}
+
+.barber-header__label {
+  font-size: 0.75rem;
+  color: #a0a0a0;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.barber-header__name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f7f2e6;
+  margin: 4px 0 0 0;
+}
+
+/* Botão de notificação */
+.barber-header__notification-btn {
+  background: none;
+  border: none;
+  color: #d4af37;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.barber-header__notification-btn:hover {
+  transform: scale(1.1);
+}
+
+.barber-header__notification-btn:active {
+  transform: scale(0.95);
+}
+
+/* Responsivo */
+@media (max-width: 480px) {
+  .barber-header {
+    padding: 16px 12px;
+  }
+
+  .barber-header__avatar {
+    width: 45px;
+    height: 45px;
+  }
+
+  .barber-header__name {
+    font-size: 1.25rem;
+  }
+}
