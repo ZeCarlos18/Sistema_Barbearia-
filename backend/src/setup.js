@@ -37,6 +37,7 @@ async function setupDatabase() {
         password VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
         role ENUM('client', 'barber', 'admin') DEFAULT 'client',
+        avatar LONGBLOB NULL COMMENT 'Imagem do barbeiro em base64',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_email (email)
@@ -66,6 +67,7 @@ async function setupDatabase() {
         user_id INT NOT NULL,
         barber_id INT NOT NULL,
         service_id INT NOT NULL,
+        price DECIMAL(10, 2) NOT NULL COMMENT 'Preço do serviço no momento do agendamento',
         date DATE NOT NULL,
         time TIME NOT NULL,
         status ENUM('pending', 'confirmed', 'completed', 'cancelled') DEFAULT 'pending',

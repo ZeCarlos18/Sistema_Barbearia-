@@ -13,6 +13,7 @@ const availableTimesRoutes = require('./routes/availableTimesRoutes');
 const unavailabilityRoutes = require('./routes/unavailabilityRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const barberAvailabilityRoutes = require('./routes/barberAvailabilityRoutes');
+const barberRoutes = require('./routes/barberRoutes');
 
 const app = express();
 
@@ -78,6 +79,9 @@ app.use('/api/notifications', notificationRoutes);
 
 // Rotas de Disponibilidade do Barbeiro
 app.use('/api/barber-availability', barberAvailabilityRoutes);
+
+// Rotas do Barbeiro (Dashboard consolidado)
+app.use('/api/barber', barberRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

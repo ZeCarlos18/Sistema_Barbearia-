@@ -12,9 +12,21 @@ class Appointment {
     const connection = await pool.getConnection();
     
     try {
+      // Buscar o preço do serviço
+      const [serviceRows] = await connection.query(
+        'SELECT price FROM services WHERE id = ?',
+        [serviceId]
+      );
+      
+      if (serviceRows.length === 0) {
+        throw new Error('SERVICE_NOT_FOUND');
+      }
+      
+      const price = serviceRows[0].price;
+      
       const [result] = await connection.query(
-        'INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
-        [userId, barberId, serviceId, date, time]
+        'INSERT INTO appointments (user_id, barber_id, service_id, price, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
+        [userId, barberId, serviceId, price, date, time]
       );
       
       return {
@@ -22,6 +34,7 @@ class Appointment {
         userId,
         barberId,
         serviceId,
+        price,
         date,
         time,
         status: 'confirmed',
