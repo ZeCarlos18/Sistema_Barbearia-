@@ -17,6 +17,7 @@ export async function apiFetch(endpoint, options = {}) {
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+  
   const payload = await response.json();
 
   if (!response.ok) {

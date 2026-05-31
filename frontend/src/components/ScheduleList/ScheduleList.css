@@ -1,0 +1,72 @@
+/**
+ * Estilos da Lista de Agendamentos
+ * Seção que agrupa título + lista de itens
+ */
+
+.schedule-section {
+  padding: 24px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Título da seção */
+.schedule-section__title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #a0a0a0;
+  margin: 0 16px 16px 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Container da lista */
+.schedule-section__list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Estado vazio */
+.schedule-section__empty {
+  text-align: center;
+  color: #b8b8b8;
+  padding: 32px 16px;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* Estado carregando */
+.schedule-section__loading {
+  text-align: center;
+  color: #d4af37;
+  padding: 24px 16px;
+  font-size: 0.9rem;
+  margin: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Animação de pulse */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsivo */
+@media (max-width: 480px) {
+  .schedule-section {
+    padding: 16px 0;
+  }
+
+  .schedule-section__title {
+    font-size: 0.8rem;
+    margin: 0 12px 12px 12px;
+  }
+
+  .schedule-section__empty,
+  .schedule-section__loading {
+    padding: 24px 12px;
+  }
+}

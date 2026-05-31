@@ -166,7 +166,7 @@ npm run build        # Build otimizado para produção
 | Barbeiro | rafael@barber.com | password123 |
 | Cliente | teste2@test.com | password123 |
 | Cliente | cliente@test.com | password123 |
-
+|Admin | admin@gmail.com | admin123 |
 
 ## ▶️ Como Executar o Projeto
 

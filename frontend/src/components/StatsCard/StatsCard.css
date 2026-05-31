@@ -1,0 +1,69 @@
+/**
+ * Estilos do Card de Estatística
+ * Card reutilizável que mostra número + label
+ */
+
+.stats-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  background: #171717;
+  min-height: 100px;
+  transition: background-color 0.2s ease;
+}
+
+.stats-card:hover {
+  background: #1a1a1a;
+}
+
+/* Label */
+.stats-card__label {
+  font-size: 0.75rem;
+  color: #b8b8b8;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Valor */
+.stats-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #f7f2e6;
+  margin: 8px 0 0 0;
+}
+
+/* Variantes */
+
+/* Variante: Lucro (em dourado) */
+.stats-card--profit .stats-card__value {
+  color: #d4af37;
+}
+
+/* Variante: Restantes */
+.stats-card--remaining {
+  border-color: rgba(212, 175, 55, 0.1);
+}
+
+.stats-card--remaining .stats-card__value {
+  color: #d4af37;
+}
+
+/* Responsivo */
+@media (max-width: 480px) {
+  .stats-card {
+    padding: 12px;
+    min-height: 85px;
+  }
+
+  .stats-card__label {
+    font-size: 0.7rem;
+  }
+
+  .stats-card__value {
+    font-size: 1.5rem;
+  }
+}

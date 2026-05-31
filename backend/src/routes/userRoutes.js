@@ -5,7 +5,7 @@ const UserController = require('../controllers/UserController');
 const { authenticate } = require('../middlewares/auth');
 
 // Buscar todos os barbeiros
-router.get('/barbers', async (req, res) => {
+router.get('/barbers', authenticate, async (req, res) => {
   try {
     const barbers = await User.findByRole('barber');
     
@@ -52,7 +52,7 @@ router.put('/profile',
 );
 
 // Buscar usuário por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);

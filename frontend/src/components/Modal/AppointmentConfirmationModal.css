@@ -1,0 +1,326 @@
+/* ============================================
+   BACKDROP - Fundo semi-transparente
+   ============================================ */
+
+.confirmation-modal__backdrop {
+  /* Posicionamento */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  
+  /* Aparência */
+  background: rgba(0, 0, 0, 0.7);
+  
+  /* Stacking */
+  z-index: 998;
+  
+  /* Animação */
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* ============================================
+   MODAL CONTAINER - Card principal
+   ============================================ */
+
+.confirmation-modal {
+  /* Posicionamento */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  /* Dimensões */
+  width: min(90vw, 370px);
+  max-height: 90vh;
+  
+  /* Layout */
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  
+  /* Espaçamento interno */
+  padding: 32px 24px;
+  
+  /* Aparência */
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  
+  /* Overflow (se conteúdo for muito grande) */
+  overflow-y: auto;
+  
+  /* Stacking */
+  z-index: 999;
+  
+  /* Animação */
+  animation: slideUp 0.4s ease-out;
+}
+
+/* ============================================
+   ICON - Ícone de confirmação
+   ============================================ */
+
+.confirmation-modal__icon {
+  /* Dimensões */
+  width: 80px;
+  height: 80px;
+  
+  /* Layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Aparência */
+  background: rgba(212, 175, 55, 0.15);
+  border-radius: 50%;
+  color: #d4af37;
+  
+  /* Animação */
+  animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.confirmation-modal__icon svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* ============================================
+   TITLE - Título principal
+   ============================================ */
+
+.confirmation-modal__title {
+  /* Tipografia */
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f7f2e6;
+  text-align: center;
+  
+  /* Reset default */
+  margin: 0;
+  
+  /* Animação */
+  animation: fadeInDown 0.5s ease-out 0.1s both;
+}
+
+/* ============================================
+   DETAILS - Seção com informações
+   ============================================ */
+
+.confirmation-modal__details {
+  /* Dimensões */
+  width: 100%;
+  
+  /* Espaçamento e layout */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  
+  /* Aparência */
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  
+  /* Animação */
+  animation: fadeInUp 0.5s ease-out 0.2s both;
+}
+
+/* --- Detail Row (linha com 2 colunas) --- */
+
+.confirmation-modal__detail-row {
+  /* Layout grid - 2 colunas */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  
+  /* Primeira linha quebra em mobile pequeno */
+}
+
+/* --- Detail Item (célula individual) --- */
+
+.confirmation-modal__detail-item {
+  /* Layout */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* --- Label (rótulo) --- */
+
+.confirmation-modal__label {
+  /* Tipografia */
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #b8b8b8;
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+}
+
+/* --- Value (valor) --- */
+
+.confirmation-modal__value {
+  /* Tipografia */
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #f7f2e6;
+}
+
+/* ============================================
+   BUTTON - Botão de ação
+   ============================================ */
+
+.confirmation-modal__button {
+  /* Dimensões */
+  width: 100%;
+  padding: 14px 24px;
+  
+  /* Tipografia */
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111111;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  /* Aparência */
+  background: #d4af37;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  
+  /* Transição */
+  transition: all 0.2s ease-in-out;
+  
+  /* Animação de entrada */
+  animation: fadeInUp 0.5s ease-out 0.3s both;
+}
+
+.confirmation-modal__button:hover {
+  background: #e5c158;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.3);
+}
+
+.confirmation-modal__button:active {
+  transform: translateY(0px);
+}
+
+/* ============================================
+   ANIMAÇÕES
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   RESPONSIVIDADE - Desktop
+   ============================================ */
+
+@media (min-width: 768px) {
+  .confirmation-modal {
+    width: min(90vw, 450px);
+    padding: 40px 32px;
+    gap: 28px;
+  }
+
+  .confirmation-modal__title {
+    font-size: 1.75rem;
+  }
+
+  .confirmation-modal__icon {
+    width: 100px;
+    height: 100px;
+  }
+
+  .confirmation-modal__details {
+    padding: 28px;
+    gap: 20px;
+  }
+
+  .confirmation-modal__detail-row {
+    gap: 32px;
+  }
+
+  .confirmation-modal__button {
+    padding: 16px 28px;
+    font-size: 1.05rem;
+  }
+}
+
+/* ============================================
+   SCROLLBAR (para conteúdo grande)
+   ============================================ */
+
+.confirmation-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.confirmation-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.confirmation-modal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.confirmation-modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

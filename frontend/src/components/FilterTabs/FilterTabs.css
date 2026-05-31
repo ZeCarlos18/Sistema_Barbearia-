@@ -1,0 +1,84 @@
+.filter-tabs {
+  /* Layout */
+  display: flex;
+  gap: 18px;
+  
+  /* Espaçamento */
+  padding: 0 16px;
+  margin: 40px 0 24px 0;
+  min-height: 60px;
+  
+  /* Scroll horizontal em mobile */
+  overflow-x: auto;
+  
+  /* Remove scrollbar visual (mantém funcionalidade) */
+  scrollbar-width: none;
+}
+
+.filter-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-tabs__button {
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  /* Dimensões */
+  padding: 14px 26px;
+  min-width: 120px;
+  height: 30px;
+  
+  /* Aparência */
+  background: #1a1a1a;
+  color: #a0a0a0;
+  border: 1px solid #3a3a3a;
+  border-radius: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  
+  /* Tipografia */
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  
+  /* Transição suave */
+  transition: all 0.2s ease-in-out;
+}
+
+/* Estado hover (não ativo) */
+.filter-tabs__button:hover:not(.is-active) {
+  background: #333333;
+  color: #d4d4d4;
+}
+
+/* Estado ativo */
+.filter-tabs__button.is-active {
+  background: #d4af37;
+  color: #111111;
+  border: none;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+}
+
+/* Feedback visual ao clicar */
+.filter-tabs__button:active {
+  transform: scale(0.98);
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  .filter-tabs {
+    padding: 0 12px;
+    margin: 18px 0px 12px 0px;
+    gap: 10px;
+  }
+
+  .filter-tabs__button {
+    padding: 14px 20px;
+    min-width: 100px;
+    height: 35px;
+    font-size: 0.95rem;
+    border-radius: 30px;
+  }
+}

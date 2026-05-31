@@ -1,15 +1,13 @@
 const Appointment = require('../models/Appointment');
 const Service = require('../models/Service');
-const Unavailability = require('../models/Unavailability');
-const AvailabilityService = require('../services/AvailabilityService');
 
 class AppointmentController {
   /**
    * Criar novo agendamento
-   * Permite múltiplos agendamentos por cliente, mas valida:
-   * - Horários duplicados para o mesmo barbeiro
-   * - Horários conflitantes considerando duração do serviço
-   * - Indisponibilidades do barbeiro
+   * Valida:
+   * - Campos obrigatórios
+   * - Se o serviço existe
+   * - Se o horário está disponível
    */
   static async create(req, res) {
     try {
@@ -28,24 +26,6 @@ class AppointmentController {
         return res.status(404).json({
           success: false,
           message: 'Serviço não encontrado'
-        });
-      }
-
-      // Verificar se o horário já está ocupado para o barbeiro
-      const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
-      if (occupiedTimes.includes(time)) {
-        return res.status(409).json({
-          success: false,
-          message: 'Horário duplicado: Este horário já está ocupado para este barbeiro nesta data'
-        });
-      }
-
-      // Verificar indisponibilidades do barbeiro
-      const unavailabilities = await Unavailability.findActiveUnavailabilities(barberId, date, time);
-      if (unavailabilities.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: 'Horário conflitante: Este horário está indisponível para este barbeiro no momento'
         });
       }
 
@@ -259,7 +239,14 @@ class AppointmentController {
         });
       }
 
-      const availableTimes = await AvailabilityService.getAvailableSlots(barberId, date);
+      const allTimes = [];
+      for (let hour = 9; hour < 19; hour++) {
+        allTimes.push(`${hour.toString().padStart(2, '0')}:00`);
+        allTimes.push(`${hour.toString().padStart(2, '0')}:30`);
+      }
+
+      const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
+      const availableTimes = allTimes.filter(time => !occupiedTimes.includes(time));
 
       res.json({
         success: true,
