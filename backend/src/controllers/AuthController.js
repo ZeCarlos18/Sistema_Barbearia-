@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { handleError } = require('../utils/errorHandler');
 
 /**
  * AuthController - Controlador de autenticação
@@ -143,12 +144,7 @@ static async register(req, res) {
         redirectUrl: '/dashboard'
       });
     } catch (error) {
-      console.error('Erro no login:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao realizar login',
-        error: error.message
-      });
+      handleError(res, error, 'Erro no login:', 'AuthController');
     }
   }
 
@@ -176,12 +172,7 @@ static async register(req, res) {
         }
       });
     } catch (error) {
-      console.error('Erro no logout:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao realizar logout',
-        error: error.message
-      });
+      handleError(res, error, 'Erro no logout:', 'AuthController');
     }
   }
 
@@ -206,12 +197,7 @@ static async register(req, res) {
         user
       });
     } catch (error) {
-      console.error('Erro ao obter perfil:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao obter perfil do usuário',
-        error: error.message
-      });
+      handleError(res ,error, 'Erro ao obter perfil:', 'AuthController');
     }
   }
 
@@ -227,12 +213,7 @@ static async register(req, res) {
         users
       });
     } catch (error) {
-      console.error('Erro ao listar usuários:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao listar usuários',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao listar usuários:', 'AuthController');
     }
   }
 }

@@ -1,6 +1,7 @@
 const Unavailability = require('../models/Unavailability');
 const Notification = require('../models/Notification');
 const Appointment = require('../models/Appointment');
+const { handleError } = require('../utils/errorHandler');
 
 class UnavailabilityController {
   static async create(req, res) {
@@ -50,12 +51,7 @@ class UnavailabilityController {
         affectedAppointments: conflictingAppointments.length
       });
     } catch (error) {
-      console.error('Erro ao criar indisponibilidade:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao criar indisponibilidade',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao criar indisponibilidade:', 'UnavailabilityController');
     }
   }
 
@@ -123,12 +119,7 @@ class UnavailabilityController {
         data: updated
       });
     } catch (error) {
-      console.error('Erro ao atualizar indisponibilidade:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao atualizar indisponibilidade',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao atualizar indisponibilidade:', 'UnavailabilityController');
     }
   }
 
@@ -150,12 +141,7 @@ class UnavailabilityController {
         data: unavailabilities
       });
     } catch (error) {
-      console.error('Erro ao listar indisponibilidades:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao listar indisponibilidades',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao listar indisponibilidades:', 'UnavailabilityController');
     }
   }
 
@@ -187,12 +173,7 @@ class UnavailabilityController {
         }
       });
     } catch (error) {
-      console.error('Erro ao verificar conflitos:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao verificar conflitos',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao verificar conflitos:', 'UnavailabilityController');
     }
   }
 
@@ -214,12 +195,7 @@ class UnavailabilityController {
         message: 'Indisponibilidade removida'
       });
     } catch (error) {
-      console.error('Erro ao deletar indisponibilidade:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao deletar indisponibilidade',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao deletar indisponibilidade:', 'UnavailabilityController');
     }
   }
 
@@ -244,12 +220,7 @@ class UnavailabilityController {
         }
       });
     } catch (error) {
-      console.error('Erro ao verificar disponibilidade:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao verificar disponibilidade',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao verificar disponibilidade:', 'UnavailabilityController');
     }
   }
 }

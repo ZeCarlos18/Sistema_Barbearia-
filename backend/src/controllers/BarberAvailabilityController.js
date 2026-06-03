@@ -1,5 +1,5 @@
 const BarberAvailability = require('../models/BarberAvailability');
-
+const { handleError } = require('../utils/errorHandler');
 class BarberAvailabilityController {
   static async updateSchedule(req, res) {
     try {
@@ -27,12 +27,7 @@ class BarberAvailabilityController {
         data: schedule
       });
     } catch (error) {
-      console.error('Erro ao atualizar horários:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao atualizar horários',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao atualizar horários:', 'BarberAvailabilityController');
     }
   }
 
@@ -61,12 +56,7 @@ class BarberAvailabilityController {
         data: schedule
       });
     } catch (error) {
-      console.error('Erro ao buscar horários:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar horários',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao buscar horários:', 'BarberAvailabilityController');
     }
   }
 }

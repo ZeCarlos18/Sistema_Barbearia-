@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Appointment = require('../models/Appointment');
 const Unavailability = require('../models/Unavailability');
 const Service = require('../models/Service');
+const { handleError } = require('../utils/errorHandler');
 
 /**
  * BarberController - Controlador para dados do barbeiro
@@ -108,12 +109,7 @@ class BarberController {
         }
       });
     } catch (error) {
-      console.error('Erro ao buscar dashboard do barbeiro:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar dashboard',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao buscar dashboard do barbeiro:', 'BarberController');
     }
   }
 
@@ -151,12 +147,7 @@ class BarberController {
         conn.release();
       }
     } catch (error) {
-      console.error('Erro ao atualizar avatar:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao atualizar avatar',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao atualizar avatar:', 'BarberController');
     }
   }
 }

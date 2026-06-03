@@ -1,7 +1,7 @@
 import React from 'react';
 import { FiBell, FiChevronRight, FiClock, FiLock, FiLogOut, FiUser } from 'react-icons/fi';
-import BottomNav from '../../components/BottomNav/BottomNav';
-import { fetchMyAppointments, getProfile, updateProfile } from '../../services/userService';
+import BottomNav from '../../../components/BottomNav/BottomNav';
+import { fetchMyAppointments, getProfile, updateProfile } from '../../../services/userService';
 import './ClientSettings.css';
 
 function getStoredUser() {

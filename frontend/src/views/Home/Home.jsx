@@ -28,37 +28,53 @@ export default function Home({ onStartBooking, onNavigate }) {
   React.useEffect(() => {
     let isMounted = true;
 
-    async function loadAppointment() {
+async function loadAppointment() {
       try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const now = new Date();
         
         const appointments = await fetchMyAppointments();
         
         if (isMounted && Array.isArray(appointments) && appointments.length > 0) {
-          // Filtrar agendamentos não cancelados e a partir de hoje
+          // Filtrar agendamentos não cancelados e a partir de AGORA (data e hora)
           const futureAppointments = appointments.filter(apt => {
             if (apt.status === 'cancelled') return false;
-            const appointmentDate = new Date(apt.date);
-            appointmentDate.setHours(0, 0, 0, 0);
-            return appointmentDate >= today;
+            
+            // Limpa a data que vem do MySQL (pega apenas o YYYY-MM-DD)
+            const dateStr = String(apt.date).split('T')[0];
+            const timeStr = String(apt.time).slice(0, 5); // Pega apenas HH:mm
+            
+            // Cria um objeto Date exato do agendamento
+            const appointmentDate = new Date(`${dateStr}T${timeStr}:00`);
+            
+            return appointmentDate >= now;
           });
 
           if (futureAppointments.length > 0) {
-            // Ordenar por data e hora
+            // Ordenar de forma CRESCENTE (o mais próximo primeiro)
             futureAppointments.sort((a, b) => {
-              const dateA = new Date(`${a.date}T${a.time}`);
-              const dateB = new Date(`${b.date}T${b.time}`);
+              const dateStrA = String(a.date).split('T')[0];
+              const timeStrA = String(a.time).slice(0, 5);
+              const dateA = new Date(`${dateStrA}T${timeStrA}:00`);
+              
+              const dateStrB = String(b.date).split('T')[0];
+              const timeStrB = String(b.time).slice(0, 5);
+              const dateB = new Date(`${dateStrB}T${timeStrB}:00`);
+              
               return dateA - dateB;
             });
 
             const appointment = futureAppointments[0];
             setAppointmentId(appointment.id);
+            
+            // Formatar a data para exibição
+            const [year, month, day] = String(appointment.date).split('T')[0].split('-');
+            const displayDate = new Date(year, month - 1, day);
+            
             setNextAppointment({
               status: translateStatus(appointment.status) || 'Pendente',
               service: appointment.service_name || 'Serviço',
               barber: appointment.barber_name || 'Barbeiro',
-              date: `${new Date(appointment.date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}`,
+              date: displayDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }),
               time: String(appointment.time || '').slice(0, 5)
             });
           }

@@ -1,9 +1,9 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLock, FiLogOut, FiPlus, FiUser, FiUserX } from 'react-icons/fi';
-import { fetchAppointmentsByDate } from '../../services/dashboardService';
-import { createAppointment, fetchServices } from '../../services/bookingService';
-import { createUnavailability, fetchBarberSchedule, fetchBarberUnavailabilities, updateAppointmentStatus } from '../../services/availabilityService';
+import { fetchAppointmentsByDate } from '../../../services/dashboardService';
+import { createAppointment, fetchServices } from '../../../services/bookingService';
+import { createUnavailability, fetchBarberSchedule, fetchBarberUnavailabilities, updateAppointmentStatus } from '../../../services/availabilityService';
 import './BarberChief.css';
 
 function getStoredUser() {
@@ -19,13 +19,13 @@ function getStoredUser() {
   }
 }
 
-function normalizeDateValue(value) {
+const normalizeDateValue = (value) => {
   if (!value) return '';
   if (value instanceof Date) return value.toISOString().split('T')[0];
   return String(value).split('T')[0];
-}
+};
 
-function normalizeTimeValue(value) {
+const normalizeTimeValue = (value) => {
   if (!value) return '';
   if (value instanceof Date) {
     const hours = String(value.getHours()).padStart(2, '0');
@@ -34,7 +34,15 @@ function normalizeTimeValue(value) {
   }
   const str = String(value);
   return str.length >= 5 ? str.slice(0, 5) : str;
-}
+};
+
+const formatDateValue = (date) => 
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const formatTodayValue = () => {
+  const today = new Date();
+  return formatDateValue(today);
+};
 
 function buildTimeSlots(startHour = 9, endHour = 19, intervalMinutes = 30) {
   const slots = [];
@@ -56,33 +64,25 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
   const user = getStoredUser();
   const displayName = user.name || 'Lucas';
   const barberId = user.id || user.userId || user.barberId || user._id;
-  const getInitialSection = React.useCallback(() => {
+  const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+
+const getInitialSection = React.useCallback(() => {
     const params = new URLSearchParams(location.search);
     const section = params.get('section');
 
-    if (section === 'availability') {
-      return { activeNav: 'profile', profileView: 'availability' };
-    }
+    const sectionMap = {
+      'availability': { activeNav: 'profile', profileView: 'availability' },
+      'menu':         { activeNav: 'profile', profileView: 'menu' },
+      'agenda':       { activeNav: 'agenda',  profileView: 'menu' }
+    };
 
-    if (section === 'menu') {
-      return { activeNav: 'profile', profileView: 'menu' };
-    }
-
-    if (section === 'agenda') {
-      return { activeNav: 'agenda', profileView: 'menu' };
-    }
-
-    return { activeNav: 'home', profileView: 'menu' };
+    return sectionMap[section] || { activeNav: 'home', profileView: 'menu' };
   }, [location.search]);
 
   const initialSection = getInitialSection();
   const [activeNav, setActiveNav] = React.useState(initialSection.activeNav);
-  const [selectedDate, setSelectedDate] = React.useState(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-      today.getDate()
-    ).padStart(2, '0')}`;
-  });
+  const todayStr = React.useMemo(formatTodayValue, []);
+  const [selectedDate, setSelectedDate] = React.useState(todayStr);
   const [metrics, setMetrics] = React.useState({
     appointments: 0,
     profit: 0,
@@ -97,12 +97,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
-  const [availabilityDate, setAvailabilityDate] = React.useState(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-      today.getDate()
-    ).padStart(2, '0')}`;
-  });
+  const [availabilityDate, setAvailabilityDate] = React.useState(todayStr);
   const [availabilityStatus, setAvailabilityStatus] = React.useState({ loading: false, error: '' });
   const [availabilityAppointments, setAvailabilityAppointments] = React.useState([]);
   const [availabilityUnavailabilities, setAvailabilityUnavailabilities] = React.useState([]);
@@ -112,29 +107,19 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
   const [rescheduleTarget, setRescheduleTarget] = React.useState(null);
   const [rescheduleTime, setRescheduleTime] = React.useState('');
 
-  React.useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const section = params.get('section');
+React.useEffect(() => {
+    const section = new URLSearchParams(location.search).get('section');
+    const routeMap = {
+      'availability': { nav: 'profile', view: 'availability' },
+      'menu':         { nav: 'profile', view: 'menu' },
+      'agenda':       { nav: 'agenda',  view: 'menu' }
+    };
 
-    if (section === 'availability') {
-      setActiveNav('profile');
-      setProfileView('availability');
-      return;
-    }
+    const route = routeMap[section] || { nav: 'home', view: 'menu' };
 
-    if (section === 'menu') {
-      setActiveNav('profile');
-      setProfileView('menu');
-      return;
-    }
-
-    if (section === 'agenda') {
-      setActiveNav('agenda');
-      setProfileView('menu');
-      return;
-    }
-
-    setActiveNav('home');
+    setActiveNav(route.nav);
+    setProfileView(route.view);
+    
   }, [location.search]);
 
   React.useEffect(() => {
@@ -262,16 +247,16 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
     setActiveNav(id);
   }
 
-  function formatDateValue(date) {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  }
-
-  function formatDateDisplay(dateStr) {
+function formatDateDisplay(dateStr) {
     const [year, month, day] = dateStr.split('-');
     const date = new Date(year, month - 1, day);
-    const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-    const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-    return `${weekdays[date.getDay()]}, ${day} de ${months[date.getMonth()]}`;
+    const formatted = date.toLocaleDateString('pt-BR', { 
+      weekday: 'short', 
+      day: '2-digit', 
+      month: 'short' 
+    }).replace(/\./g, ''); 
+
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   }
 
   function timeToMinutes(timeStr) {
@@ -334,37 +319,22 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
     setAvailabilityMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   }
 
-  function isDayUnavailable(dateStr) {
+function isUnavailable(dateStr, timeStr = null) {
     return availabilityUnavailabilities.some((unav) => {
       const startDate = normalizeDateValue(unav.start_date || unav.startDate);
       const endDate = normalizeDateValue(unav.end_date || unav.endDate);
-      if (!startDate || !endDate) return false;
+
+      if (!startDate || !endDate || dateStr < startDate || dateStr > endDate) return false;
 
       const startTime = normalizeTimeValue(unav.start_time || unav.startTime);
       const endTime = normalizeTimeValue(unav.end_time || unav.endTime);
-      if (startTime || endTime) return false;
 
-      return dateStr >= startDate && dateStr <= endDate;
+      return (!startTime && !endTime) || !!(timeStr && startTime && endTime && timeStr >= startTime && timeStr <= endTime);
     });
   }
 
-  function isSlotUnavailable(dateStr, timeStr) {
-    return availabilityUnavailabilities.some((unav) => {
-      const startDate = normalizeDateValue(unav.start_date || unav.startDate);
-      const endDate = normalizeDateValue(unav.end_date || unav.endDate);
-      if (!startDate || !endDate) return false;
-
-      if (dateStr < startDate || dateStr > endDate) return false;
-
-      const startTime = normalizeTimeValue(unav.start_time || unav.startTime);
-      const endTime = normalizeTimeValue(unav.end_time || unav.endTime);
-      if (!startTime && !endTime) return true;
-
-      if (!startTime || !endTime) return true;
-
-      return timeStr >= startTime && timeStr <= endTime;
-    });
-  }
+  const isDayUnavailable = (dateStr) => isUnavailable(dateStr);
+  const isSlotUnavailable = (dateStr, timeStr) => isUnavailable(dateStr, timeStr);
 
   const availabilitySlots = React.useMemo(() => {
     const times = buildTimeSlots();
@@ -413,7 +383,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
     }
   }
 
-  async function handleDisableDay() {
+  async function handleUnavailabilityAction(action, confirmMessage, payload) {
     if (!barberId || availabilityAction.loading) {
       setAvailabilityAction({
         loading: false,
@@ -422,12 +392,24 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
       });
       return;
     }
-    const confirmDisable = window.confirm('Deseja indisponibilizar este dia inteiro?');
-    if (!confirmDisable) return;
+
+    const confirm = window.confirm(confirmMessage);
+    if (!confirm) return;
 
     setAvailabilityAction({ loading: true, error: '', success: '' });
     try {
-      await createUnavailability({
+      await action(payload);
+      setAvailabilityAction({ loading: false, error: '', success: payload.successMessage });
+      setSelectedSlot(null);
+      setAvailabilityRefresh((prev) => prev + 1);
+    } catch (error) {
+      setAvailabilityAction({ loading: false, error: error.message || payload.errorMessage, success: '' });
+    }
+  }
+
+  async function handleDisableDay() {
+    await handleUnavailabilityAction(
+      (payload) => createUnavailability({
         barberId,
         startDate: availabilityDate,
         endDate: availabilityDate,
@@ -435,25 +417,21 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
         endTime: null,
         reason: 'Dia indisponivel',
         action: 'suggest_reschedule'
-      });
-      setAvailabilityAction({ loading: false, error: '', success: 'Dia indisponibilizado.' });
-      setAvailabilityRefresh((prev) => prev + 1);
-    } catch (error) {
-      setAvailabilityAction({ loading: false, error: error.message || 'Erro ao indisponibilizar dia.', success: '' });
-    }
+      }),
+      'Deseja indisponibilizar este dia inteiro?',
+      { successMessage: 'Dia indisponibilizado.', errorMessage: 'Erro ao indisponibilizar dia.' }
+    );
   }
 
   async function handleDisableSlot() {
-    if (!barberId || !selectedSlot || availabilityAction.loading) return;
+    if (!selectedSlot) return;
 
     const hasAppointment = Boolean(selectedSlot.appointment);
-    const confirmDisable = window.confirm(
-      hasAppointment
-        ? 'Esse horario possui agendamento. Cancelar e desativar horario?'
-        : 'Deseja desativar este horario?'
-    );
+    const confirmMessage = hasAppointment
+      ? 'Esse horario possui agendamento. Cancelar e desativar horario?'
+      : 'Deseja desativar este horario?';
 
-    if (!confirmDisable) return;
+    if (!window.confirm(confirmMessage)) return;
 
     setAvailabilityAction({ loading: true, error: '', success: '' });
     try {
@@ -481,8 +459,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
 
   async function handleCancelAppointment(appointmentId) {
     if (!appointmentId || availabilityAction.loading) return;
-    const confirmCancel = window.confirm('Cancelar este agendamento?');
-    if (!confirmCancel) return;
+    if (!window.confirm('Cancelar este agendamento?')) return;
 
     setAvailabilityAction({ loading: true, error: '', success: '' });
     try {
@@ -589,19 +566,18 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
   }, [selectedDate]);
 
   const agendaSortedItems = React.useMemo(() => {
-    const todayStr = formatDateValue(new Date());
-    const selectedMinutes = selectedDate === todayStr ? timeToMinutes(normalizeTimeValue(new Date())) : null;
+    const todayMinutes = selectedDate === todayStr ? timeToMinutes(normalizeTimeValue(new Date())) : null;
 
     return [...agendaItems].sort((a, b) => {
       const minutesA = timeToMinutes(a.time);
       const minutesB = timeToMinutes(b.time);
 
-      if (selectedMinutes === null) {
+      if (todayMinutes === null) {
         return minutesA - minutesB;
       }
 
-      const distanceA = minutesA >= selectedMinutes ? minutesA - selectedMinutes : minutesA + 24 * 60 - selectedMinutes;
-      const distanceB = minutesB >= selectedMinutes ? minutesB - selectedMinutes : minutesB + 24 * 60 - selectedMinutes;
+      const distanceA = minutesA >= todayMinutes ? minutesA - todayMinutes : minutesA + 24 * 60 - todayMinutes;
+      const distanceB = minutesB >= todayMinutes ? minutesB - todayMinutes : minutesB + 24 * 60 - todayMinutes;
 
       if (distanceA !== distanceB) {
         return distanceA - distanceB;
@@ -609,7 +585,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
 
       return minutesA - minutesB;
     });
-  }, [agendaItems, selectedDate]);
+  }, [agendaItems, selectedDate, todayStr]);
 
   const agendaTimeline = React.useMemo(() => {
     return agendaSortedItems.map((item) => ({ type: 'appointment', ...item }));
@@ -625,6 +601,81 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
   const isProfileAvailability = isProfile && profileView === 'availability';
   const isProfileMenu = isProfile && profileView === 'menu';
 
+  function renderLoadingOrError(loading, error, emptyMessage) {
+    if (loading) {
+      return <div className="chief-empty">Carregando agenda...</div>;
+    }
+    if (error) {
+      return <div className="chief-empty">{error}</div>;
+    }
+    return null;
+  }
+
+  function renderAlert(error, success, loading) {
+    if (loading || error || success) {
+      return (
+        <div className={`chief-alert ${error ? 'is-error' : 'is-success'}`}>
+          {loading ? 'Processando...' : error || success}
+        </div>
+      );
+    }
+    return null;
+  }
+
+  function renderHeaderContent() {
+    if (isProfileAvailability) {
+      return (
+        <>
+          <button className="chief-header-back" type="button" onClick={handleBackToSettings} aria-label="Voltar">
+            <FiChevronLeft size={18} />
+          </button>
+          <h1 className="chief-header-title">Gerenciar Disponibilidade</h1>
+          <span className="chief-header-spacer" aria-hidden="true" />
+        </>
+      );
+    }
+
+    if (isProfileMenu) {
+      return <h1 className="chief-header-title">Configuracoes</h1>;
+    }
+
+    if (isAgenda) {
+      return (
+        <>
+          <div className="chief-profile chief-profile--agenda">
+            <div className="chief-avatar" aria-hidden="true" />
+            <div className="chief-greeting chief-greeting--agenda">
+              <span>Barbeiro - {displayName}</span>
+              <strong>Minha Agenda</strong>
+            </div>
+          </div>
+          <div className="chief-actions">
+            <button className="chief-icon-btn" type="button" aria-label="Notificacoes">
+              <FiBell size={18} />
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="chief-profile">
+          <div className="chief-avatar" aria-hidden="true" />
+          <div className="chief-greeting">
+            <span>Bem-Vindo</span>
+            <strong>{displayName}</strong>
+          </div>
+        </div>
+        <div className="chief-actions">
+          <button className="chief-icon-btn" type="button" aria-label="Notificacoes">
+            <FiBell size={18} />
+          </button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="chief-page">
       <div className="chief-stage">
@@ -639,49 +690,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
         <div className="chief-phone">
           <div className="chief-shell">
             <header className={`chief-header ${isProfile ? 'chief-header--profile' : ''} ${isProfileAvailability ? 'chief-header--subview' : ''}`}>
-              {isProfileAvailability ? (
-                <>
-                  <button className="chief-header-back" type="button" onClick={handleBackToSettings} aria-label="Voltar">
-                    <FiChevronLeft size={18} />
-                  </button>
-                  <h1 className="chief-header-title">Gerenciar Disponibilidade</h1>
-                  <span className="chief-header-spacer" aria-hidden="true" />
-                </>
-              ) : isProfileMenu ? (
-                <h1 className="chief-header-title">Configuracoes</h1>
-              ) : isAgenda ? (
-                <>
-                  <div className="chief-profile chief-profile--agenda">
-                    <div className="chief-avatar" aria-hidden="true" />
-                    <div className="chief-greeting chief-greeting--agenda">
-                      <span>Barbeiro - {displayName}</span>
-                      <strong>Minha Agenda</strong>
-                    </div>
-                  </div>
-
-                  <div className="chief-actions">
-                    <button className="chief-icon-btn" type="button" aria-label="Notificacoes">
-                      <FiBell size={18} />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="chief-profile">
-                    <div className="chief-avatar" aria-hidden="true" />
-                    <div className="chief-greeting">
-                      <span>Bem-Vindo</span>
-                      <strong>{displayName}</strong>
-                    </div>
-                  </div>
-
-                  <div className="chief-actions">
-                    <button className="chief-icon-btn" type="button" aria-label="Notificacoes">
-                      <FiBell size={18} />
-                    </button>
-                  </div>
-                </>
-              )}
+              {renderHeaderContent()}
             </header>
 
             <main className="chief-main">
@@ -705,12 +714,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
                   <section className="chief-agenda">
                     <h2 className="chief-section-title">Agenda do dia</h2>
                     <div className="chief-agenda-list">
-                      {status.loading && (
-                        <div className="chief-empty">Carregando agenda...</div>
-                      )}
-                      {status.error && (
-                        <div className="chief-empty">{status.error}</div>
-                      )}
+                      {renderLoadingOrError(status.loading, status.error, 'Nenhum agendamento nesta data.')}
                       {!status.loading && !status.error && agendaItems.length === 0 && (
                         <div className="chief-empty">Nenhum agendamento nesta data.</div>
                       )}
@@ -754,7 +758,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
                     </div>
 
                     <div className="chief-agenda-weekdays">
-                      {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((day) => (
+                      {WEEKDAYS.map((day) => (
                         <span key={day}>{day}</span>
                       ))}
                     </div>
@@ -783,12 +787,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
                   <div className="chief-agenda-summary">{agendaSummary}</div>
 
                   <div className="chief-agenda-list">
-                    {status.loading && (
-                      <div className="chief-empty">Carregando agenda...</div>
-                    )}
-                    {status.error && (
-                      <div className="chief-empty">{status.error}</div>
-                    )}
+                    {renderLoadingOrError(status.loading, status.error, 'Nenhum agendamento nesta data.')}
                     {!status.loading && !status.error && agendaTimeline.length === 0 && (
                       <div className="chief-empty">Nenhum agendamento nesta data.</div>
                     )}
@@ -905,7 +904,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
                       </div>
 
                       <div className="chief-calendar-weekdays">
-                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((day) => (
+                        {WEEKDAYS.map((day) => (
                           <span key={day}>{day}</span>
                         ))}
                       </div>
@@ -940,13 +939,7 @@ export default function BarberChief({ onOpenCreate, onLogout }) {
                         {availabilityAction.loading ? 'Indisponibilizando...' : 'Indisponibilizar dia'}
                       </button>
 
-                      {(availabilityAction.loading || availabilityAction.error || availabilityAction.success) && (
-                        <div className={`chief-alert ${availabilityAction.error ? 'is-error' : 'is-success'}`}>
-                          {availabilityAction.loading
-                            ? 'Salvando indisponibilidade...'
-                            : availabilityAction.error || availabilityAction.success}
-                        </div>
-                      )}
+                      {renderAlert(availabilityAction.error, availabilityAction.success, availabilityAction.loading)}
                     </div>
                   )}
 

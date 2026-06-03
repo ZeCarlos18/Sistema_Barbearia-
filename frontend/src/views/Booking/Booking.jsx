@@ -1,860 +1,320 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Booking.css';
 import avatarImage from '../../assets/image.png';
 import AppointmentConfirmationModal from '../../components/Modal/AppointmentConfirmationModal';
-import {
-  fetchServices,
-  fetchBarbers,
-  fetchAvailableTimes,
-  createAppointment
-} from '../../services/bookingService';
+import { fetchServices, fetchBarbers, fetchAvailableTimes, createAppointment } from '../../services/bookingService';
 
-const fallbackBarbers = [
-  { id: 1, name: 'Rafael' },
-  { id: 2, name: 'Lucas' },
-  { id: 3, name: 'Felipe' }
-];
+const weekdayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-const weekdayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-const monthLabels = [
-  'Janeiro',
-  'Fevereiro',
-  'Marco',
-  'Abril',
-  'Maio',
-  'Junho',
-  'Julho',
-  'Agosto',
-  'Setembro',
-  'Outubro',
-  'Novembro',
-  'Dezembro'
-];
+const timeSlots = Array.from({ length: 20 }, (_, i) => {
+  const hour = Math.floor(i / 2) + 9;
+  const mins = i % 2 === 0 ? '00' : '30';
+  return `${String(hour).padStart(2, '0')}:${mins}`;
+});
 
-const timeSlots = createTimeSlots();
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const formatDateISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const formatPrice = (v) => v ? Number(String(v).replace(',', '.')).toLocaleString('pt-BR') : '';
 
-function createTimeSlots() {
-  const slots = [];
-  for (let hour = 9; hour < 19; hour += 1) {
-    slots.push(`${hour.toString().padStart(2, '0')}:00`);
-    slots.push(`${hour.toString().padStart(2, '0')}:30`);
-  }
-  return slots;
-}
-
-function startOfDay(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function formatPrice(value) {
-  if (value === undefined || value === null || value === '') {
-    return '';
-  }
-
-  const normalized = Number(String(value).replace(',', '.'));
-  if (Number.isNaN(normalized)) {
-    return String(value);
-  }
-
-  return String(Math.round(normalized));
-}
-
-function formatDateISO(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function formatDateLabel(date) {
-  const weekday = [
-    'Domingo',
-    'Segunda',
-    'Terca',
-    'Quarta',
-    'Quinta',
-    'Sexta',
-    'Sabado'
-  ][date.getDay()];
-
-  const month = monthLabels[date.getMonth()];
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${weekday}, ${day} de ${month}`;
-}
-
-function getServiceVariant(service, index) {
-  const name = String(service?.name || '').toLowerCase();
-  if (name.includes('barb')) {
-    return 'barba';
-  }
-  if (name.includes('degrad')) {
-    return 'degrade';
-  }
-  if (name.includes('social')) {
-    return 'social';
-  }
-
-  const variants = ['barba', 'degrade', 'social'];
-  return variants[index % variants.length];
-}
+const getServiceVariant = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (n.includes('barb')) return 'barba';
+  if (n.includes('degrad')) return 'degrade';
+  return 'social';
+};
 
 export default function Booking({ onBack }) {
   const navigate = useNavigate();
-  const [step, setStep] = React.useState(0);
-  const [services, setServices] = React.useState([]);
-  const [barbers, setBarbers] = React.useState([]);
-  const [selectedServiceId, setSelectedServiceId] = React.useState('');
-  const [selectedBarberId, setSelectedBarberId] = React.useState('');
-  const [alternativeBarbers, setAlternativeBarbers] = React.useState([]);
-  const [alternativeBarberId, setAlternativeBarberId] = React.useState('');
-  const [selectedDate, setSelectedDate] = React.useState(() => startOfDay(new Date()));
-  const [calendarMonth, setCalendarMonth] = React.useState(() => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1);
-  });
-  const [selectedTime, setSelectedTime] = React.useState('');
-  const [availableTimes, setAvailableTimes] = React.useState([]);
-  const [loading, setLoading] = React.useState({
-    services: false,
-    barbers: false,
-    times: false,
-    alternatives: false
-  });
-  const [error, setError] = React.useState('');
+  const [step, setStep] = useState(0);
+  const [services, setServices] = useState([]);
+  const [barbers, setBarbers] = useState([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [selectedBarberId, setSelectedBarberId] = useState('');
+  const [alternativeBarbers, setAlternativeBarbers] = useState([]);
+  const [alternativeBarberId, setAlternativeBarberId] = useState('');
+  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfDay(new Date()));
+  const [selectedTime, setSelectedTime] = useState('');
+  const [availableTimes, setAvailableTimes] = useState([]);
+  
+  const [loading, setLoading] = useState({ data: false, times: false, alternatives: false });
+  const [error, setError] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  const [confirming, setConfirming] = React.useState(false);
-  const [successMessage, setSuccessMessage] = React.useState('');
-  const [formError, setFormError] = React.useState('');
-
-  // Estados para o Modal de Confirmação
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationData, setConfirmationData] = useState(null);
 
-  const today = React.useMemo(() => startOfDay(new Date()), []);
+  const today = useMemo(() => startOfDay(new Date()), []);
 
-  React.useEffect(() => {
+  // 1. Buscar Serviços e Barbeiros simultaneamente
+  useEffect(() => {
     let isMounted = true;
-    setLoading((current) => ({ ...current, services: true }));
-    fetchServices()
-      .then((data) => {
+    setLoading(l => ({ ...l, data: true }));
+    
+    Promise.all([fetchServices(), fetchBarbers()])
+      .then(([svcs, barbs]) => {
         if (!isMounted) return;
-        setServices(Array.isArray(data) ? data : []);
+        setServices(Array.isArray(svcs) ? svcs : []);
+        setBarbers(Array.isArray(barbs) ? barbs : []);
       })
-      .catch(() => {
-        if (!isMounted) return;
-        setServices([]);
-        setError('Nao foi possivel carregar os servicos.');
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setLoading((current) => ({ ...current, services: false }));
-      });
+      .catch(() => isMounted && setError('Não foi possível carregar os dados iniciais.'))
+      .finally(() => isMounted && setLoading(l => ({ ...l, data: false })));
 
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
-  React.useEffect(() => {
-    let isMounted = true;
-    setLoading((current) => ({ ...current, barbers: true }));
-    fetchBarbers()
-      .then((data) => {
-        if (!isMounted) return;
-        setBarbers(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        setBarbers([]);
-        setError('Nao foi possivel carregar os barbeiros.');
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setLoading((current) => ({ ...current, barbers: false }));
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  React.useEffect(() => {
+  // 2. Limpar estados ao mudar dados base
+  useEffect(() => {
     setAvailableTimes([]);
     setSelectedTime('');
     setAlternativeBarbers([]);
     setAlternativeBarberId('');
   }, [selectedBarberId, selectedDate]);
 
-  const serviceOptions = services;
-  const barberOptions = barbers.length > 0 ? barbers : fallbackBarbers;
-
-  const stageTitle = ['ESCOLHER SERVICO', 'ESCOLHER BARBEIRO', 'ESCOLHER DATA', 'ESCOLHER HORARIO'][
-    step
-  ];
-
-  const calendarDays = React.useMemo(() => {
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-    const start = new Date(year, month, 1);
-    const startWeekday = start.getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-    const days = [];
-
-    for (let i = 0; i < startWeekday; i += 1) {
-      days.push(null);
-    }
-
-    for (let day = 1; day <= totalDays; day += 1) {
-      days.push(new Date(year, month, day));
-    }
-
+  // 3. Cálculos de Calendário e Horários
+  const calendarDays = useMemo(() => {
+    const y = calendarMonth.getFullYear(), m = calendarMonth.getMonth();
+    const days = Array(new Date(y, m, 1).getDay()).fill(null);
+    for (let d = 1; d <= new Date(y, m + 1, 0).getDate(); d++) days.push(new Date(y, m, d));
     return days;
   }, [calendarMonth]);
 
-  const nowMinutes = React.useMemo(() => {
-    const now = new Date();
-    return now.getHours() * 60 + now.getMinutes();
-  }, []);
-  const isTodaySelected = selectedDate.getTime() === today.getTime();
-  const visibleSlots = timeSlots.filter((time) => {
-    if (!isTodaySelected) {
-      return true;
-    }
+  const visibleSlotSet = useMemo(() => {
+    const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+    const isToday = selectedDate.getTime() === today.getTime();
+    return new Set(timeSlots.filter(t => !isToday || (parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]) >= nowMins)));
+  }, [selectedDate, today]);
 
-    const [hour, minute] = time.split(':').map(Number);
-    const slotMinutes = hour * 60 + minute;
-    return slotMinutes >= nowMinutes;
-  });
-  const visibleSlotSet = React.useMemo(() => new Set(visibleSlots), [visibleSlots]);
-  const filteredAvailableTimes = React.useMemo(
-    () => availableTimes.filter((time) => visibleSlotSet.has(time)),
-    [availableTimes, visibleSlotSet]
-  );
-  const availableSet = React.useMemo(
-    () => new Set(filteredAvailableTimes),
-    [filteredAvailableTimes]
-  );
-  const morningSlots = visibleSlots.filter((time) => parseInt(time.split(':')[0], 10) < 12);
-  const afternoonSlots = visibleSlots.filter((time) => parseInt(time.split(':')[0], 10) >= 12);
+  const availableSet = useMemo(() => new Set(availableTimes.filter(t => visibleSlotSet.has(t))), [availableTimes, visibleSlotSet]);
+  
+  const timeGroups = [
+    { title: 'MANHÃ', slots: [...visibleSlotSet].filter(t => parseInt(t) < 12) },
+    { title: 'TARDE', slots: [...visibleSlotSet].filter(t => parseInt(t) >= 12) }
+  ];
 
-  const hasRealBarbers = barbers.length > 0;
-
-  React.useEffect(() => {
+  // 4. Buscar Barbeiros Alternativos (Otimizado)
+  useEffect(() => {
+    if (step !== 3 || availableSet.size > 0 || !barbers.length) return;
+    
     let isMounted = true;
+    setLoading(l => ({ ...l, alternatives: true }));
+    
+    const others = barbers.filter(b => String(b.id) !== String(selectedBarberId));
+    Promise.all(others.map(b => fetchAvailableTimes(b.id, formatDateISO(selectedDate)).catch(() => ({}))))
+      .then(results => {
+        if (!isMounted) return;
+        const alts = others.filter((_, i) => (results[i]?.availableTimes || []).some(t => visibleSlotSet.has(t)));
+        setAlternativeBarbers(alts);
+      })
+      .finally(() => isMounted && setLoading(l => ({ ...l, alternatives: false })));
 
-    if (step !== 3 || filteredAvailableTimes.length > 0) {
-      setAlternativeBarbers([]);
-      setAlternativeBarberId('');
-      return () => {
-        isMounted = false;
-      };
+    return () => { isMounted = false; };
+  }, [step, availableSet.size, selectedBarberId, selectedDate, barbers, visibleSlotSet]);
+
+  const fetchTimes = async (bId) => {
+    setLoading(l => ({ ...l, times: true }));
+    try {
+      const { availableTimes: times } = await fetchAvailableTimes(bId, formatDateISO(selectedDate));
+      setAvailableTimes(Array.isArray(times) ? times : []);
+      if (bId !== selectedBarberId) {
+        setSelectedBarberId(bId);
+        setSelectedTime('');
+      }
+      setStep(3);
+    } catch (err) {
+      setError(err.message || 'Erro ao carregar horários.');
+    } finally {
+      setLoading(l => ({ ...l, times: false }));
+    }
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!selectedServiceId || !selectedBarberId || !selectedTime) {
+      return setFormError('Preencha todos os campos.');
     }
 
-    if (!hasRealBarbers) {
-      const fallbackList = barberOptions.filter(
-        (barber) => String(barber.id) !== String(selectedBarberId)
-      );
-      setAlternativeBarbers(fallbackList);
-      return () => {
-        isMounted = false;
-      };
-    }
+    setConfirming(true);
+    setFormError('');
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+      if (!user?.id) throw new Error('Faça login para agendar.');
 
-    setLoading((current) => ({ ...current, alternatives: true }));
-    setAlternativeBarbers([]);
-
-    const dateKey = formatDateISO(selectedDate);
-    const barbersToCheck = barberOptions.filter(
-      (barber) => String(barber.id) !== String(selectedBarberId)
-    );
-
-    Promise.all(
-      barbersToCheck.map(async (barber) => {
-        try {
-          const data = await fetchAvailableTimes(barber.id, dateKey);
-          const times = Array.isArray(data.availableTimes) ? data.availableTimes : [];
-          const filtered = times.filter((time) => visibleSlotSet.has(time));
-          return filtered.length > 0 ? barber : null;
-        } catch (requestError) {
-          return null;
-        }
-      })
-    )
-      .then((results) => {
-        if (!isMounted) return;
-        setAlternativeBarbers(results.filter(Boolean));
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setLoading((current) => ({ ...current, alternatives: false }));
+      await createAppointment({
+        userId: user.id,
+        barberId: Number(selectedBarberId),
+        serviceId: Number(selectedServiceId),
+        date: formatDateISO(selectedDate),
+        time: selectedTime
       });
 
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    step,
-    // depend only on lengths/primitives to avoid reference churn
-    filteredAvailableTimes.length,
-    selectedBarberId,
-    selectedDate,
-    barbers.length,
-    hasRealBarbers,
-    visibleSlots.length
-  ]);
-
-  function handleBack() {
-    if (step > 0) {
-      setStep((current) => current - 1);
-    } else if (onBack) {
-      onBack();
-    }
-  }
-
-  function handleDateSelect(day) {
-    setSelectedDate(startOfDay(day));
-  }
-
-  async function handleViewTimes() {
-    if (!selectedBarberId || !selectedDate) {
-      return;
-    }
-
-    setLoading((current) => ({ ...current, times: true }));
-    setError('');
-
-    try {
-      const data = await fetchAvailableTimes(selectedBarberId, formatDateISO(selectedDate));
-      setAvailableTimes(Array.isArray(data.availableTimes) ? data.availableTimes : []);
-      setStep(3);
-    } catch (requestError) {
-      setAvailableTimes([]);
-      setError(requestError.message || 'Nao foi possivel carregar os horarios.');
-    } finally {
-      setLoading((current) => ({ ...current, times: false }));
-    }
-  }
-
-  async function handleAlternativeContinue() {
-    if (!alternativeBarberId) {
-      return;
-    }
-
-    setLoading((current) => ({ ...current, times: true }));
-    setError('');
-
-    try {
-      const data = await fetchAvailableTimes(alternativeBarberId, formatDateISO(selectedDate));
-      setSelectedBarberId(alternativeBarberId);
-      setAvailableTimes(Array.isArray(data.availableTimes) ? data.availableTimes : []);
-      setSelectedTime('');
-      setStep(3);
-    } catch (requestError) {
-      setAvailableTimes([]);
-      setError(requestError.message || 'Nao foi possivel carregar os horarios.');
-    } finally {
-      setLoading((current) => ({ ...current, times: false }));
-    }
-  }
-
-  // handler para confirmar e salvar agendamento
-  async function handleConfirmBooking() {
-    if (!selectedServiceId || !selectedBarberId || !selectedTime || !selectedDate) {
-      setFormError('Selecione serviço, barbeiro, data e horário antes de continuar.');
-      return;
-    }
-
-    setFormError('');
-    setConfirming(true);
-    setSuccessMessage('');
-
-    try {
-      // obter userId do storage (o backend espera userId no body)
-      const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user') || '{}';
-      const user = JSON.parse(storedUser);
-      const userId = user?.id;
-
-      if (!userId) {
-        throw new Error('Usuário não autenticado. Faça login antes de agendar.');
-      }
-
-      const serviceIdNum = Number(selectedServiceId);
-      if (Number.isNaN(serviceIdNum)) {
-        throw new Error('Serviço inválido. Selecione um serviço cadastrado.');
-      }
-
-      const payload = {
-        userId,
-        barberId: Number(selectedBarberId),
-        serviceId: serviceIdNum,
-        date: formatDateISO(selectedDate), // YYYY-MM-DD
-        time: selectedTime // HH:MM
-      };
-
-      await createAppointment(payload);
-
-      // Buscar informações do barbeiro e serviço selecionados para o modal
-      const selectedBarber = barberOptions.find(b => String(b.id) === String(selectedBarberId));
-      const selectedService = serviceOptions.find(s => String(s.id) === String(selectedServiceId));
-
-      // Abrir modal de confirmação
       setConfirmationData({
-        barberName: selectedBarber?.name || 'Barbeiro',
-        serviceName: selectedService?.name || 'Serviço',
+        barberName: barbers.find(b => String(b.id) === String(selectedBarberId))?.name,
+        serviceName: services.find(s => String(s.id) === String(selectedServiceId))?.name,
         date: formatDateISO(selectedDate),
         time: selectedTime
       });
       setShowConfirmation(true);
-
-      // Limpar estado e voltar ao início
-      setSelectedServiceId('');
-      setSelectedBarberId('');
-      setSelectedTime('');
-      setAvailableTimes([]);
-      setStep(0);
     } catch (err) {
-      setFormError(err.message || 'Erro ao salvar agendamento.');
+      setFormError(err.message);
     } finally {
       setConfirming(false);
     }
-  }
+  };
 
-  // Função para fechar o modal e redirecionar
-  function handleCloseConfirmation() {
-    setShowConfirmation(false);
-    setConfirmationData(null);
-    // Redirecionar para Home
-    navigate('/home');
-  }
-
-  const calendarMonthLabel = `${monthLabels[calendarMonth.getMonth()]} ${calendarMonth.getFullYear()}`;
-
-  const selectedDateLabel = formatDateLabel(selectedDate);
+  const HeaderTitle = ({ title, sub }) => (
+    <div className="booking-title-block">
+      <h2 className="booking-title">{title}</h2>
+      <p className="booking-subtitle">{sub}</p>
+    </div>
+  );
 
   return (
     <div className="booking-root">
       <div className="booking-stage">
-        <div className="booking-stage-title">{stageTitle}</div>
+        <div className="booking-stage-title">
+          {['ESCOLHER SERVIÇO', 'ESCOLHER BARBEIRO', 'ESCOLHER DATA', 'ESCOLHER HORÁRIO'][step]}
+        </div>
+        
         <div className="booking-phone">
           <div className="booking-shell">
             <header className="booking-header">
-              <button
-                type="button"
-                className="booking-back"
-                onClick={handleBack}
-                disabled={step === 0 && !onBack}
-                aria-label="Voltar"
-              />
-              <div className="booking-header-center">
-                <span className="booking-header-label">NOVO AGENDAMENTO</span>
-              </div>
-              <div className="booking-header-avatar">
-                <img src={avatarImage} alt="Barbeiro" />
-              </div>
+              <button className="booking-back" onClick={() => step > 0 ? setStep(s => s - 1) : onBack?.()} />
+              <div className="booking-header-center"><span className="booking-header-label">NOVO AGENDAMENTO</span></div>
+              <div className="booking-header-avatar"><img src={avatarImage} alt="Barbeiro" /></div>
             </header>
 
             <div className="booking-body">
               {step === 0 && (
                 <section className="booking-section">
-                  <div className="booking-title-block">
-                    <h2 className="booking-title">ESCOLHA O SERVICO</h2>
-                    <p className="booking-subtitle">Selecione o que deseja realizar</p>
-                  </div>
-
+                  <HeaderTitle title="ESCOLHA O SERVIÇO" sub="Selecione o que deseja realizar" />
                   <div className="booking-divider" />
-
-                  {loading.services ? (
-                    <div className="booking-loader">Carregando servicos...</div>
-                  ) : serviceOptions.length === 0 ? (
-                    <div className="booking-error">
-                      Nenhum serviço disponível. Contate o administrador.
-                    </div>
-                  ) : (
+                  
+                  {loading.data ? <div className="booking-loader">Carregando...</div> : (
                     <div className="service-grid">
-                      {serviceOptions.map((service, index) => {
-                        const id = String(service.id ?? index);
-                        const isSelected = selectedServiceId === id;
-                        const variant = getServiceVariant(service, index);
-                        const priceText = formatPrice(service.price);
-
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            className={`service-card ${isSelected ? 'is-selected' : ''}`}
-                            onClick={() => setSelectedServiceId(id)}
-                          >
-                            <div
-                              className={`service-media service-media--${variant}`}
-                              style={{ backgroundImage: `url(${avatarImage})` }}
-                            >
-                              {isSelected ? (
-                                <span className="service-avatar">
-                                  <img src={avatarImage} alt="Selecionado" />
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="service-info">
-                              <span className="service-name">
-                                {String(service.name || 'Servico').toUpperCase()}
-                              </span>
-                              {priceText ? (
-                                <span className="service-price">
-                                  <span className="service-currency">R$</span>
-                                  <span className="service-amount">{priceText}</span>
-                                </span>
-                              ) : null}
-                            </div>
-                            <span className="service-select" aria-hidden="true" />
-                          </button>
-                        );
-                      })}
+                      {services.map((s, i) => (
+                        <button key={s.id} className={`service-card ${selectedServiceId === String(s.id) ? 'is-selected' : ''}`} onClick={() => setSelectedServiceId(String(s.id))}>
+                          <div className={`service-media service-media--${getServiceVariant(s.name)}`} style={{ backgroundImage: `url(${avatarImage})` }}>
+                            {selectedServiceId === String(s.id) && <span className="service-avatar"><img src={avatarImage} alt="Sel" /></span>}
+                          </div>
+                          <div className="service-info">
+                            <span className="service-name">{String(s.name).toUpperCase()}</span>
+                            {s.price && <span className="service-price"><span className="service-currency">R$</span><span className="service-amount">{formatPrice(s.price)}</span></span>}
+                          </div>
+                          <span className="service-select" />
+                        </button>
+                      ))}
                     </div>
                   )}
-
-                  <button
-                    type="button"
-                    className="booking-cta"
-                    onClick={() => setStep(1)}
-                    disabled={!selectedServiceId}
-                  >
-                    CONTINUAR
-                    <span className="booking-cta-arrow" aria-hidden="true" />
-                  </button>
+                  <button className="booking-cta" onClick={() => setStep(1)} disabled={!selectedServiceId}>CONTINUAR</button>
                 </section>
               )}
 
               {step === 1 && (
                 <section className="booking-section">
-                  <div className="booking-title-block">
-                    <h2 className="booking-title">BARBEIROS</h2>
-                    <p className="booking-subtitle">Selecione o barbeiro de sua preferencia</p>
-                  </div>
-
+                  <HeaderTitle title="BARBEIROS" sub="Selecione o profissional" />
                   <div className="booking-divider" />
-
-                  {loading.barbers ? (
-                    <div className="booking-loader">Carregando barbeiros...</div>
-                  ) : (
-                    <div className="barber-list">
-                      {barberOptions.map((barber, index) => {
-                        const id = String(barber.id ?? index);
-                        const isSelected = selectedBarberId === id;
-
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            className={`barber-card ${isSelected ? 'is-selected' : ''}`}
-                            onClick={() => setSelectedBarberId(id)}
-                          >
-                            <div className="barber-left">
-                              <span className="barber-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                                  <circle cx="12" cy="8" r="4" />
-                                  <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
-                                </svg>
-                              </span>
-                              <span className="barber-name">{barber.name}</span>
-                            </div>
-                            <div className="barber-right">
-                              <span className={`barber-check ${isSelected ? 'is-selected' : ''}`} />
-                              {isSelected ? (
-                                <span className="barber-avatar">
-                                  <img src={avatarImage} alt="Selecionado" />
-                                </span>
-                              ) : null}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    className="booking-cta"
-                    onClick={() => setStep(2)}
-                    disabled={!selectedBarberId}
-                  >
-                    CONTINUAR
-                    <span className="booking-cta-arrow" aria-hidden="true" />
-                  </button>
+                  
+                  <div className="barber-list">
+                    {barbers.map(b => (
+                      <button key={b.id} className={`barber-card ${selectedBarberId === String(b.id) ? 'is-selected' : ''}`} onClick={() => setSelectedBarberId(String(b.id))}>
+                        <div className="barber-left"><span className="barber-icon" /><span className="barber-name">{b.name}</span></div>
+                        <div className="barber-right">
+                          <span className={`barber-check ${selectedBarberId === String(b.id) ? 'is-selected' : ''}`} />
+                          {selectedBarberId === String(b.id) && <span className="barber-avatar"><img src={avatarImage} alt="Sel" /></span>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <button className="booking-cta" onClick={() => setStep(2)} disabled={!selectedBarberId}>CONTINUAR</button>
                 </section>
               )}
 
               {step === 2 && (
                 <section className="booking-section">
-                  <div className="booking-title-block">
-                    <h2 className="booking-title">ESCOLHA A DATA</h2>
-                    <p className="booking-subtitle">Selecione o dia disponivel</p>
-                  </div>
-
+                  <HeaderTitle title="ESCOLHA A DATA" sub="Selecione o dia disponível" />
                   <div className="booking-divider" />
 
                   <div className="calendar">
                     <div className="calendar-header">
-                      <button
-                        type="button"
-                        className="calendar-nav"
-                        onClick={() =>
-                          setCalendarMonth(
-                            new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1)
-                          )
-                        }
-                        aria-label="Mes anterior"
-                      />
-                      <div className="calendar-month">{calendarMonthLabel}</div>
-                      <button
-                        type="button"
-                        className="calendar-nav calendar-nav--next"
-                        onClick={() =>
-                          setCalendarMonth(
-                            new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1)
-                          )
-                        }
-                        aria-label="Proximo mes"
-                      />
+                      <button className="calendar-nav" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} />
+                      <div className="calendar-month">{calendarMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</div>
+                      <button className="calendar-nav calendar-nav--next" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} />
                     </div>
-
-                    <div className="calendar-week">
-                      {weekdayLabels.map((label) => (
-                        <span key={label}>{label}</span>
-                      ))}
-                    </div>
-
+                    
+                    <div className="calendar-week">{weekdayLabels.map(l => <span key={l}>{l}</span>)}</div>
+                    
                     <div className="calendar-grid">
-                      {calendarDays.map((day, index) => {
-                        if (!day) {
-                          return <div key={`empty-${index}`} className="calendar-empty" />;
-                        }
-
-                        const dayStart = startOfDay(day);
-                        const isPast = dayStart < today;
-                        const isSelected = dayStart.getTime() === selectedDate.getTime();
-
-                        return (
-                          <button
-                            key={day.toISOString()}
-                            type="button"
-                            className={`calendar-day ${
-                              isSelected ? 'is-selected' : isPast ? 'is-unavailable' : 'is-available'
-                            }`}
-                            onClick={() => handleDateSelect(day)}
-                            disabled={isPast}
-                          >
-                            {day.getDate()}
-                          </button>
-                        );
-                      })}
+                      {calendarDays.map((d, i) => d ? (
+                        <button key={d.toISOString()} className={`calendar-day ${d.getTime() === selectedDate.getTime() ? 'is-selected' : (d < today ? 'is-unavailable' : 'is-available')}`} onClick={() => setSelectedDate(d)} disabled={d < today}>
+                          {d.getDate()}
+                        </button>
+                      ) : <div key={i} className="calendar-empty" />)}
                     </div>
                   </div>
-
-                  <div className="calendar-legend">
-                    <div className="legend-item">
-                      <span className="legend-dot legend-dot--available" />
-                      Disponivel
-                    </div>
-                    <div className="legend-item">
-                      <span className="legend-dot legend-dot--selected" />
-                      Selecionado
-                    </div>
-                    <div className="legend-item">
-                      <span className="legend-dot legend-dot--unavailable" />
-                      Indisponivel
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="booking-cta"
-                    onClick={handleViewTimes}
-                    disabled={!selectedBarberId || loading.times}
-                  >
-                    {loading.times ? 'CARREGANDO...' : 'VER HORARIOS'}
-                    <span className="booking-cta-arrow" aria-hidden="true" />
-                  </button>
+                  
+                  <button className="booking-cta" onClick={() => fetchTimes(selectedBarberId)} disabled={loading.times}>{loading.times ? 'CARREGANDO...' : 'VER HORÁRIOS'}</button>
                 </section>
               )}
 
               {step === 3 && (
                 <section className="booking-section">
                   <div className="booking-title-block">
-                    <h2 className="booking-title">ESCOLHA O HORARIO</h2>
-                    <div className="date-chip">
-                      <span className="chip-icon" aria-hidden="true" />
-                      {selectedDateLabel}
-                    </div>
-                    <p className="booking-subtitle">Selecione um horario disponivel</p>
+                    <h2 className="booking-title">ESCOLHA O HORÁRIO</h2>
+                    <div className="date-chip"><span className="chip-icon" />{selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
                   </div>
-
                   <div className="booking-divider" />
 
-                  {loading.times ? (
-                    <div className="booking-loader">Carregando horarios...</div>
+                  {loading.times ? <div className="booking-loader">Carregando...</div> : availableSet.size === 0 ? (
+                    <div className="no-availability">
+                      <div className="no-availability-message">Nenhum horário disponível.</div>
+                      <div className="no-availability-subtitle">Tente outro profissional:</div>
+                      {loading.alternatives ? <div className="booking-loader">Buscando...</div> : (
+                        <div className="barber-list">
+                          {alternativeBarbers.map(b => (
+                            <button key={b.id} className={`barber-card ${alternativeBarberId === String(b.id) ? 'is-selected' : ''}`} onClick={() => setAlternativeBarberId(String(b.id))}>
+                              <div className="barber-left"><span className="barber-name">{b.name}</span></div>
+                              <div className="barber-right"><span className={`barber-check ${alternativeBarberId === String(b.id) ? 'is-selected' : ''}`} /></div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div className="no-availability-actions">
+                        <button className="booking-cta booking-cta--ghost" onClick={() => setStep(2)}>OUTRO DIA</button>
+                        <button className="booking-cta" onClick={() => fetchTimes(alternativeBarberId)} disabled={!alternativeBarberId || loading.times}>CONTINUAR</button>
+                      </div>
+                    </div>
                   ) : (
                     <>
-                      {filteredAvailableTimes.length === 0 ? (
-                        <div className="no-availability">
-                          <div className="no-availability-message">
-                            O barbeiro selecionado nao possui horarios disponiveis nesta data.
-                          </div>
-                          <div className="no-availability-subtitle">
-                            Selecione outro profissional disponivel
-                          </div>
-
-                          {loading.alternatives ? (
-                            <div className="booking-loader">Buscando outros barbeiros...</div>
-                          ) : (
-                            <div className="barber-list alt-barber-list">
-                              {alternativeBarbers.map((barber) => {
-                                const id = String(barber.id);
-                                const isSelected = alternativeBarberId === id;
-
-                                return (
-                                  <button
-                                    key={id}
-                                    type="button"
-                                    className={`barber-card ${isSelected ? 'is-selected' : ''}`}
-                                    onClick={() => setAlternativeBarberId(id)}
-                                  >
-                                    <div className="barber-left">
-                                      <span className="barber-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                                          <circle cx="12" cy="8" r="4" />
-                                          <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
-                                        </svg>
-                                      </span>
-                                      <span className="barber-name">{barber.name}</span>
-                                    </div>
-                                    <div className="barber-right">
-                                      <span
-                                        className={`barber-check ${
-                                          isSelected ? 'is-selected' : ''
-                                        }`}
-                                      />
-                                      {isSelected ? (
-                                        <span className="barber-avatar">
-                                          <img src={avatarImage} alt="Selecionado" />
-                                        </span>
-                                      ) : null}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          <div className="no-availability-actions">
-                            <button
-                              type="button"
-                              className="booking-cta booking-cta--ghost"
-                              onClick={() => setStep(2)}
-                            >
-                              ESCOLHER OUTRO DIA
-                            </button>
-                            <button
-                              type="button"
-                              className="booking-cta"
-                              onClick={handleAlternativeContinue}
-                              disabled={!alternativeBarberId || loading.times}
-                            >
-                              CONTINUAR
-                              <span className="booking-cta-arrow" aria-hidden="true" />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <h3 className="slot-title">MANHA</h3>
+                      {timeGroups.map(group => (
+                        <React.Fragment key={group.title}>
+                          <h3 className="slot-title">{group.title}</h3>
                           <div className="slot-grid">
-                            {morningSlots.map((time) => {
-                              const isAvailable = availableSet.has(time);
-                              const isSelected = selectedTime === time;
-
-                              return (
-                                <button
-                                  key={time}
-                                  type="button"
-                                  className={`slot-button ${
-                                    isSelected
-                                      ? 'slot--selected'
-                                      : isAvailable
-                                      ? 'slot--available'
-                                      : 'slot--unavailable'
-                                  }`}
-                                  onClick={() => setSelectedTime(time)}
-                                  disabled={!isAvailable}
-                                >
-                                  {isAvailable ? time : <span className="slot-dot" />}
-                                </button>
-                              );
-                            })}
+                            {group.slots.map(t => (
+                              <button key={t} className={`slot-button ${selectedTime === t ? 'slot--selected' : (availableSet.has(t) ? 'slot--available' : 'slot--unavailable')}`} onClick={() => setSelectedTime(t)} disabled={!availableSet.has(t)}>
+                                {availableSet.has(t) ? t : <span className="slot-dot" />}
+                              </button>
+                            ))}
                           </div>
-
-                          <h3 className="slot-title">TARDE</h3>
-                          <div className="slot-grid">
-                            {afternoonSlots.map((time) => {
-                              const isAvailable = availableSet.has(time);
-                              const isSelected = selectedTime === time;
-
-                              return (
-                                <button
-                                  key={time}
-                                  type="button"
-                                  className={`slot-button ${
-                                    isSelected
-                                      ? 'slot--selected'
-                                      : isAvailable
-                                      ? 'slot--available'
-                                      : 'slot--unavailable'
-                                  }`}
-                                  onClick={() => setSelectedTime(time)}
-                                  disabled={!isAvailable}
-                                >
-                                  {isAvailable ? time : <span className="slot-dot" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
+                        </React.Fragment>
+                      ))}
+                      
+                      <div className="booking-confirm" style={{marginTop: 16}}>
+                        {formError && <div className="booking-error">{formError}</div>}
+                        <button className="booking-cta" onClick={handleConfirmBooking} disabled={!selectedTime || confirming}>
+                          {confirming ? 'ENVIANDO...' : 'CONFIRMAR'}
+                        </button>
+                      </div>
                     </>
                   )}
-                  {/* confirmação do agendamento */}
-                  {filteredAvailableTimes.length > 0 ? (
-                    <div className="booking-confirm">
-                      {formError ? <div className="booking-error">{formError}</div> : null}
-                      {successMessage ? (
-                        <div className="booking-success">{successMessage}</div>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        className="booking-cta"
-                        onClick={handleConfirmBooking}
-                        disabled={!selectedTime || confirming}
-                      >
-                        {confirming ? 'ENVIANDO...' : 'CONTINUAR'}
-                        <span className="booking-cta-arrow" aria-hidden="true" />
-                      </button>
-                    </div>
-                  ) : null}
                 </section>
               )}
-
-              {null}
             </div>
           </div>
         </div>
 
-        {/* Modal de Confirmação de Agendamento */}
-        <AppointmentConfirmationModal
-          isOpen={showConfirmation}
-          onClose={handleCloseConfirmation}
-          appointmentData={confirmationData}
-        />
+        <AppointmentConfirmationModal isOpen={showConfirmation} onClose={() => { setShowConfirmation(false); navigate('/home'); }} appointmentData={confirmationData} />
       </div>
     </div>
   );

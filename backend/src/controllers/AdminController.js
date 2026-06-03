@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { handleError } = require('../utils/errorHandler');
 
 /**
  * AdminController - Controlador de administração
@@ -97,8 +98,7 @@ class AdminController {
 
       return res.status(201).json(responsePayload);
     } catch (error) {
-      console.error('Erro ao criar barbeiro:', error);
-      return res.status(500).json({ success: false, message: 'Erro ao criar barbeiro', error: error.message });
+      handleError(res, error, 'Erro ao criar barbeiro:', 'AdminController');
     }
   }
 
@@ -144,12 +144,7 @@ class AdminController {
         }))
       });
     } catch (error) {
-      console.error('Erro ao listar barbeiros:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao listar barbeiros',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao listar barbeiros:', 'AdminController');
     }
   }
 
@@ -190,12 +185,7 @@ class AdminController {
         }
       });
     } catch (error) {
-      console.error('Erro ao obter barbeiro:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao obter barbeiro',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao obter barbeiro:', 'AdminController');
     }
   }
 
@@ -238,12 +228,7 @@ class AdminController {
         message: 'Barbeiro excluído com sucesso'
       });
     } catch (error) {
-      console.error('Erro ao excluir barbeiro:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao excluir barbeiro',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao excluir barbeiro:', 'AdminController');
     }
   }
 }

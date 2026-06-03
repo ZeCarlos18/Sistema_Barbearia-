@@ -129,6 +129,32 @@ class Appointment {
     }
   }
 
+/**
+   * Buscar agendamentos ativos do usuário
+   * @param {Number} userId - ID do usuário
+   * @returns {Array} Lista de agendamentos ativos (pending ou confirmed)
+   */
+  static async findActiveByUserId(userId) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [rows] = await connection.query(`
+        SELECT a.*, b.name as barber_name, s.name as service_name
+        FROM appointments a
+        LEFT JOIN users b ON a.barber_id = b.id
+        LEFT JOIN services s ON a.service_id = s.id
+        WHERE a.user_id = ? 
+          AND a.status IN ('pending', 'confirmed')
+          AND a.date >= CURDATE()
+        ORDER BY a.date ASC, a.time ASC
+      `, [userId]);
+      
+      return rows;
+    } finally {
+      connection.release();
+    }
+  }
+
   /**
    * Buscar horários ocupados por barbeiro em uma data específica
    * Considera apenas agendamentos confirmados ou completados
@@ -145,11 +171,11 @@ class Appointment {
         [barberId, date]
       );
       
-      // Normalizar formato do horário (remover segundos)
+      // Normalizar formato do horário 
       return rows.map(row => {
         const time = row.time;
         if (typeof time === 'string') {
-          return time.substring(0, 5); // Retorna HH:MM
+          return time.substring(0, 5); 
         }
         // Se for objeto Date do MySQL
         const hours = String(time.getHours()).padStart(2, '0');

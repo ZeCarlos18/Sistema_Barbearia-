@@ -1,4 +1,5 @@
 const Service = require('../models/Service');
+const { handleError } = require('../utils/errorHandler');
 
 class ServiceController {
   /**
@@ -22,12 +23,7 @@ class ServiceController {
         data: service
       });
     } catch (error) {
-      console.error('Erro ao criar serviço:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao criar serviço',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao criar serviço:', 'ServiceController');
     }
   }
 
@@ -43,12 +39,7 @@ class ServiceController {
         data: services
       });
     } catch (error) {
-      console.error('Erro ao listar serviços:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao listar serviços',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao listar serviços:', 'ServiceController');
     }
   }
 
@@ -72,12 +63,7 @@ class ServiceController {
         data: service
       });
     } catch (error) {
-      console.error('Erro ao buscar serviço:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar serviço',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao buscar serviço:', 'ServiceController');
     }
   }
 
@@ -103,12 +89,7 @@ class ServiceController {
         data: service
       });
     } catch (error) {
-      console.error('Erro ao atualizar serviço:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao atualizar serviço',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao atualizar serviço:', 'ServiceController');
     }
   }
 
@@ -132,12 +113,7 @@ class ServiceController {
         message: 'Serviço deletado com sucesso'
       });
     } catch (error) {
-      console.error('Erro ao deletar serviço:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao deletar serviço',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao deletar serviço:', 'ServiceController');
     }
   }
 }

@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+const { handleError } = require('../utils/errorHandler');
 
 class NotificationController {
   static async getByUser(req, res) {
@@ -19,12 +20,7 @@ class NotificationController {
         data: notifications
       });
     } catch (error) {
-      console.error('Erro ao buscar notificações:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar notificações',
-        error: error.message
-      });
+      console.error('Erro ao buscar notificações:', 'NotificationController');
     }
   }
 
@@ -47,12 +43,7 @@ class NotificationController {
         data: notifications
       });
     } catch (error) {
-      console.error('Erro ao buscar notificações não lidas:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar notificações',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao buscar notificações não lidas:', 'NotificationController');
     }
   }
 
@@ -67,12 +58,7 @@ class NotificationController {
         message: 'Notificação marcada como lida'
       });
     } catch (error) {
-      console.error('Erro ao marcar notificação como lida:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao atualizar notificação',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao marcar notificação como lida:', 'NotificationController');
     }
   }
 
@@ -94,12 +80,7 @@ class NotificationController {
         message: 'Notificação removida'
       });
     } catch (error) {
-      console.error('Erro ao deletar notificação:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erro ao deletar notificação',
-        error: error.message
-      });
+      handleError(res, error, 'Erro ao deletar notificação:', 'NotificationController');
     }
   }
 }

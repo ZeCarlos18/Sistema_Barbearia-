@@ -1,18 +1,19 @@
 const Appointment = require('../models/Appointment');
 const Service = require('../models/Service');
+const { handleError } = require('../utils/errorHandler')
 
-// Função auxiliar para tratamento de erros padronizado
-const handleError = (res, error, defaultMessage) => {
-  console.error(`[AppointmentController] ${defaultMessage}:`, error);
-  return res.status(500).json({
-    success: false,
-    message: defaultMessage,
-    error: error.message
-  });
+// Função auxiliar para gerar a grade de horários da barbearia
+const generateTimeSlots = () => {
+  const slots = [];
+  for (let hour = 9; hour < 19; hour++) {
+    slots.push(`${hour.toString().padStart(2, '0')}:00`);
+    slots.push(`${hour.toString().padStart(2, '0')}:30`);
+  }
+  return slots;
 };
 
 class AppointmentController {
-  /**
+/**
    * Criar novo agendamento
    */
   static async create(req, res) {
@@ -20,32 +21,52 @@ class AppointmentController {
       const { userId, barberId, serviceId, date, time } = req.body;
 
       if (!userId || !barberId || !serviceId || !date || !time) {
-        return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios: userId, barberId, serviceId, date, time' });
+        return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios' });
+      }
+
+      const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+      const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+
+      if (!dateRegex.test(date) || !timeRegex.test(time)) {
+        return res.status(400).json({ success: false, message: 'Data ou horário inválidos' });
       }
 
       const service = await Service.findById(serviceId);
       if (!service) return res.status(404).json({ success: false, message: 'Serviço não encontrado' });
 
-      const activeAppointments = await Appointment.findActiveByUserId(userId);
-      if (activeAppointments.length > 0) {
-        return res.status(409).json({ success: false, message: 'Você já possui um agendamento ativo. Cancele o agendamento anterior antes de fazer um novo.' });
+      // NOVA REGRA: Permite múltiplos agendamentos, mas bloqueia se for no MESMO horário exato
+      const userAppointmentsOnDate = await Appointment.findByUserAndDate(userId, date);
+      const hasConflict = userAppointmentsOnDate.some(
+        (apt) => apt.time.startsWith(time) && apt.status !== 'cancelled'
+      );
+      
+      if (hasConflict) {
+        return res.status(409).json({ success: false, message: 'Você já tem um agendamento marcado para este mesmo horário.' });
       }
 
+      // Validação de data no passado
+      const [year, month, day] = date.split('-').map(Number);
+      const [hour, minute] = time.split(':').map(Number);
+      const appointmentDateTime = new Date(year, month - 1, day, hour, minute, 0, 0);
+      
+      if (appointmentDateTime <= new Date()) {
+        return res.status(400).json({ success: false, message: 'Não é possível agendar num horário passado.' });
+      }
+
+      // Validação se o barbeiro está livre
       const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
       if (occupiedTimes.includes(time)) {
-        return res.status(409).json({ success: false, message: 'Horário já está ocupado para este barbeiro nesta data' });
+        return res.status(409).json({ success: false, message: 'Horário já está ocupado.' });
       }
 
+      // Cria o agendamento
       const appointment = await Appointment.create({ userId, barberId, serviceId, date, time });
       res.status(201).json({ success: true, data: appointment });
     } catch (error) {
-      handleError(res, error, 'Erro ao criar agendamento');
+      handleError(res, error, 'Erro ao criar agendamento', 'AppointmentController');
     }
   }
 
-  /**
-   * Listar todos os agendamentos
-   */
   static async findAll(req, res) {
     try {
       const appointments = await Appointment.findAll();
@@ -55,68 +76,45 @@ class AppointmentController {
     }
   }
 
-  /**
-   * Buscar agendamento por ID
-   */
   static async findById(req, res) {
     try {
-      const { id } = req.params;
-      const appointment = await Appointment.findById(id);
-
+      const appointment = await Appointment.findById(req.params.id);
       if (!appointment) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
-
       res.json({ success: true, data: appointment });
     } catch (error) {
       handleError(res, error, 'Erro ao buscar agendamento');
     }
   }
 
-  /**
-   * Listar agendamentos do usuário logado
-   */
   static async findMyAppointments(req, res) {
     try {
-      const userId = req.userId;
-      if (!userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
-
-      const appointments = await Appointment.findByUserId(userId);
+      if (!req.userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      const appointments = await Appointment.findByUserId(req.userId);
       res.json({ success: true, data: appointments });
     } catch (error) {
       handleError(res, error, 'Erro ao listar agendamentos do usuário');
     }
   }
 
-  /**
-   * Listar agendamentos passados e futuros do usuário logado
-   */
   static async findMyPastAndFutureAppointments(req, res) {
     try {
-      const userId = req.userId;
-      if (!userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
-
-      const appointments = await Appointment.findPastAndFutureByUserId(userId);
+      if (!req.userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      const appointments = await Appointment.findPastAndFutureByUserId(req.userId);
       res.json({ success: true, data: appointments });
     } catch (error) {
       handleError(res, error, 'Erro ao listar agendamentos (passados e futuros)');
     }
   }
 
-  /**
-   * Listar agendamentos por barbeiro
-   */
   static async findByBarber(req, res) {
     try {
-      const { barberId } = req.params;
-      const appointments = await Appointment.findByBarberId(barberId);
+      const appointments = await Appointment.findByBarberId(req.params.barberId);
       res.json({ success: true, data: appointments });
     } catch (error) {
       handleError(res, error, 'Erro ao listar agendamentos do barbeiro');
     }
   }
 
-  /**
-   * Buscar horários disponíveis para um barbeiro em uma data
-   */
   static async getAvailableTimes(req, res) {
     try {
       const { barberId } = req.params;
@@ -126,12 +124,7 @@ class AppointmentController {
         return res.status(400).json({ success: false, message: 'BarberId e date são obrigatórios' });
       }
 
-      const allTimes = [];
-      for (let hour = 9; hour < 19; hour++) {
-        allTimes.push(`${hour.toString().padStart(2, '0')}:00`);
-        allTimes.push(`${hour.toString().padStart(2, '0')}:30`);
-      }
-
+      const allTimes = generateTimeSlots();
       const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
       const availableTimes = allTimes.filter(time => !occupiedTimes.includes(time));
 
@@ -150,12 +143,7 @@ class AppointmentController {
         return res.status(400).json({ success: false, message: 'BarberId e date são obrigatórios' });
       }
 
-      const allTimes = [];
-      for (let hour = 9; hour < 19; hour++) {
-        allTimes.push(`${hour.toString().padStart(2, '0')}:00`);
-        allTimes.push(`${hour.toString().padStart(2, '0')}:30`);
-      }
-
+      const allTimes = generateTimeSlots();
       const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
       const availableTimes = allTimes.filter(time => !occupiedTimes.includes(time));
 
@@ -165,9 +153,6 @@ class AppointmentController {
     }
   }
 
-  /**
-   * Listar agendamentos por data
-   */
   static async findByDate(req, res) {
     try {
       const appointments = await Appointment.findByDate(req.params.date);
@@ -177,9 +162,6 @@ class AppointmentController {
     }
   }
 
-  /**
-   * Atualizar status do agendamento
-   */
   static async updateStatus(req, res) {
     try {
       const { id } = req.params;
@@ -187,7 +169,7 @@ class AppointmentController {
 
       const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
       if (!validStatuses.includes(status)) {
-        return res.status(400).json({ success: false, message: 'Status inválido. Use: pending, confirmed, completed, cancelled' });
+        return res.status(400).json({ success: false, message: 'Status inválido.' });
       }
 
       const appointment = await Appointment.updateStatus(id, status);
@@ -199,18 +181,14 @@ class AppointmentController {
     }
   }
 
-  /**
-   * Cancelar agendamento seguindo as Regras de Negócio
-   */
   static async cancel(req, res) {
     try {
       const { id } = req.params;
-      
       const appointment = await Appointment.findById(id);
       if (!appointment) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
 
-      if (appointment.status !== 'confirmed') {
-        return res.status(409).json({ success: false, message: 'Apenas agendamentos confirmados podem ser cancelados.' });
+      if (appointment.status !== 'confirmed' && appointment.status !== 'pending') {
+        return res.status(409).json({ success: false, message: 'Este agendamento não pode ser cancelado.' });
       }
 
       let dateStr = appointment.date;
@@ -221,30 +199,28 @@ class AppointmentController {
       const appointmentDateTime = new Date(`${dateStr}T${appointment.time}`);
       const hoursUntilAppointment = (appointmentDateTime - new Date()) / (1000 * 60 * 60);
 
+      // Verifica se o agendamento já passou (horas negativas ou zero)
+      if (hoursUntilAppointment <= 0) {
+        return res.status(400).json({ success: false, message: 'Este agendamento já passou e não pode ser cancelado.' });
+      }
+
+      // Verifica as 24 horas de antecedência
       if (hoursUntilAppointment < 24) {
         return res.status(409).json({ success: false, message: 'Não é possível cancelar com menos de 24 horas de antecedência.' });
       }
 
       const canceledAppointment = await Appointment.updateStatus(id, 'cancelled');
-
-      // Emissão de evento / Log
-      console.log(`\n🔔 [NOTIFICAÇÃO SISTEMA]\n   Para: Barbeiro ID ${appointment.barber_id} (${appointment.barber_name})\n   Mensagem: O cliente ${appointment.user_name || 'Cliente'} cancelou o serviço de ${appointment.service_name} marcado para o dia ${dateStr} às ${String(appointment.time).slice(0, 5)}.\n   Status do Horário: Liberado e disponível na tabela.\n`);
-
-      res.json({ success: true, message: 'Agendamento cancelado com sucesso e horário liberado.', data: canceledAppointment });
+      res.json({ success: true, message: 'Agendamento cancelado com sucesso.', data: canceledAppointment });
     } catch (error) {
       handleError(res, error, 'Erro ao cancelar agendamento');
     }
   }
 
-  /**
-   * Deletar agendamento
-   */
   static async delete(req, res) {
     try {
       const deleted = await Appointment.delete(req.params.id);
       if (!deleted) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
-
-      res.json({ success: true, message: 'Agendamento deletado com sucesso' });
+      res.json({ success: true, message: 'Agendamento deletado' });
     } catch (error) {
       handleError(res, error, 'Erro ao deletar agendamento');
     }
@@ -256,26 +232,16 @@ class AppointmentController {
       let { date } = req.params;
 
       if (!barberId) return res.status(400).json({ success: false, message: 'ID do barbeiro é obrigatório' });
-
-      if (!date) {
-        date = new Date().toISOString().split('T')[0];
-      }
+      if (!date) date = new Date().toISOString().split('T')[0];
 
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return res.status(400).json({ success: false, message: 'Data deve estar no formato YYYY-MM-DD' });
+        return res.status(400).json({ success: false, message: 'Data inválida' });
       }
 
       const appointments = await Appointment.findByBarberAndDate(barberId, date);
-
       res.json({
         success: true,
-        data: {
-          barberId,
-          date,
-          scheduledAppointments: appointments.length,
-          appointments,
-          message: appointments.length === 0 ? `Nenhum agendamento para ${date}` : undefined
-        }
+        data: { barberId, date, scheduledAppointments: appointments.length, appointments }
       });
     } catch (error) {
       handleError(res, error, 'Erro ao obter agenda do barbeiro');
@@ -287,23 +253,17 @@ class AppointmentController {
       const { barberId } = req.params;
       const { startDate, endDate } = req.query;
 
-      if (!barberId) return res.status(400).json({ success: false, message: 'ID do barbeiro é obrigatório' });
-
-      if (!startDate || !endDate) {
-        return res.status(400).json({ success: false, message: 'startDate e endDate são obrigatórios (formato YYYY-MM-DD)' });
-      }
-
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-        return res.status(400).json({ success: false, message: 'Datas devem estar no formato YYYY-MM-DD' });
+      if (!barberId || !startDate || !endDate) {
+        return res.status(400).json({ success: false, message: 'Faltam parâmetros' });
       }
 
       if (new Date(startDate) > new Date(endDate)) {
-        return res.status(400).json({ success: false, message: 'startDate deve ser menor ou igual a endDate' });
+        return res.status(400).json({ success: false, message: 'startDate maior que endDate' });
       }
 
       const appointments = await Appointment.findByBarberDateRange(barberId, startDate, endDate);
-
       const appointmentsByDate = {};
+      
       appointments.forEach(apt => {
         const dateStr = apt.date instanceof Date ? apt.date.toISOString().split('T')[0] : apt.date;
         if (!appointmentsByDate[dateStr]) appointmentsByDate[dateStr] = [];
@@ -312,17 +272,10 @@ class AppointmentController {
 
       res.json({
         success: true,
-        data: {
-          barberId,
-          startDate,
-          endDate,
-          totalAppointments: appointments.length,
-          appointmentsByDate,
-          message: appointments.length === 0 ? `Nenhum agendamento entre ${startDate} e ${endDate}` : undefined
-        }
+        data: { barberId, startDate, endDate, totalAppointments: appointments.length, appointmentsByDate }
       });
     } catch (error) {
-      handleError(res, error, 'Erro ao obter agenda do barbeiro (intervalo)');
+      handleError(res, error, 'Erro ao obter agenda (intervalo)');
     }
   }
 }

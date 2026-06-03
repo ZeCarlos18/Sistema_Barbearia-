@@ -15,11 +15,11 @@
 
 import React from 'react';
 import { FiBell } from 'react-icons/fi';
-import FilterTabs from '../../components/FilterTabs/FilterTabs';
-import AppointmentCard from '../../components/AppointmentCard/AppointmentCard';
-import EmptyState from '../../components/EmptyState/EmptyState';
-import BottomNav from '../../components/BottomNav/BottomNav';
-import { getMyAppointments, cancelAppointment } from '../../services/appointmentService';
+import FilterTabs from '../../../components/FilterTabs/FilterTabs';
+import AppointmentCard from '../../../components/AppointmentCard/AppointmentCard';
+import EmptyState from '../../../components/EmptyState/EmptyState';
+import BottomNav from '../../../components/BottomNav/BottomNav';
+import { getMyAppointments, cancelAppointment } from '../../../services/appointmentService';
 import './Appointments.css';
 
 /**

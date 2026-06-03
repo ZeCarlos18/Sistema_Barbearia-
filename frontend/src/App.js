@@ -8,11 +8,11 @@ import Login from './views/Login/Login';
 import Home from './views/Home/Home';
 import RecoverPassword from './views/RecoverPassword/RecoverPassword';
 import Booking from './views/Booking/Booking';
-import ClientSettings from './views/ClientSettings/ClientSettings';
-import BarberDashboard from './views/BarberDashboard/BarberDashboard';
-import BarberChief from './views/BarberChief/BarberChief';
-import BarberCreate from './views/BarberCreate/BarberCreate';
-import Appointments from './views/Appointments/Appointments';
+import ClientSettings from './views/Client/ClientSettings/ClientSettings';
+import BarberDashboard from './views/Barber/BarberDashboard/BarberDashboard';
+import BarberChief from './views/Barber/BarberChief/BarberChief';
+import BarberCreate from './views/Barber/BarberCreate/BarberCreate';
+import Appointments from './views/Client/Appointments/Appointments';
 
 
 function getStoredUser() {

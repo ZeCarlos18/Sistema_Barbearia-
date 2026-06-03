@@ -1,9 +1,6 @@
 const User = require('../models/User');
+const { handleError } = require('../utils/errorHandler'); // <-- Importação do utilitário
 
-/**
- * UserController - Controlador de usuários
- * Gerencia as funções de perfil do usuário
- */
 class UserController {
   /**
    * Atualizar perfil do usuário
@@ -16,85 +13,48 @@ class UserController {
       // Buscar usuário atual com senha
       const currentUser = await User.findByIdWithPassword(userId);
       if (!currentUser) {
-        return res.status(404).json({
-          success: false,
-          message: 'Usuário não encontrado'
-        });
+        return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
       }
 
       // Preparar dados para atualização
       const updateData = {};
 
       if (name !== undefined) {
-        if (!name.trim()) {
-          return res.status(400).json({
-            success: false,
-            message: 'Nome não pode estar vazio'
-          });
-        }
+        if (!name.trim()) return res.status(400).json({ success: false, message: 'Nome não pode estar vazio' });
         updateData.name = name.trim();
       }
 
       if (email !== undefined) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Formato de email inválido'
-          });
-        }
+        if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: 'Formato de email inválido' });
         updateData.email = email.toLowerCase().trim();
       }
 
       if (phone !== undefined) {
-        // Validar formato de telefone (exemplo: apenas números, 10-11 dígitos)
         const phoneRegex = /^\d{10,11}$/;
         if (phone && !phoneRegex.test(phone.replace(/\D/g, ''))) {
-          return res.status(400).json({
-            success: false,
-            message: 'Formato de telefone inválido (deve conter 10-11 dígitos)'
-          });
+          return res.status(400).json({ success: false, message: 'Formato de telefone inválido (deve conter 10-11 dígitos)' });
         }
         updateData.phone = phone ? phone.replace(/\D/g, '') : null;
       }
 
       // Se está tentando alterar senha
       if (newPassword) {
-        // Verificar se forneceu senha antiga
-        if (!oldPassword) {
-          return res.status(400).json({
-            success: false,
-            message: 'Senha antiga é obrigatória para alterar a senha'
-          });
-        }
+        if (!oldPassword) return res.status(400).json({ success: false, message: 'Senha antiga é obrigatória para alterar a senha' });
 
-        // Verificar senha antiga
         const isOldPasswordValid = await User.comparePassword(oldPassword, currentUser.password);
-        if (!isOldPasswordValid) {
-          return res.status(400).json({
-            success: false,
-            message: 'Senha antiga incorreta'
-          });
-        }
+        if (!isOldPasswordValid) return res.status(400).json({ success: false, message: 'Senha antiga incorreta' });
 
-        // Validar nova senha
         const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{6,})/;
         if (!passwordRegex.test(newPassword)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Nova senha deve ter no mínimo 6 caracteres, uma letra maiúscula e um caractere especial'
-          });
+          return res.status(400).json({ success: false, message: 'Nova senha deve ter no mínimo 6 caracteres, uma letra maiúscula e um caractere especial' });
         }
-
         updateData.password = newPassword;
       }
 
       // Verificar se há pelo menos um campo para atualizar
       if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Nenhum campo para atualizar'
-        });
+        return res.status(400).json({ success: false, message: 'Nenhum campo para atualizar' });
       }
 
       // Atualizar usuário
@@ -111,42 +71,26 @@ class UserController {
           updatedAt: updatedUser.updated_at
         }
       });
+      
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
+      // 1. Dicionário de erros conhecidos mapeados para os seus status e mensagens
+      const errorMap = {
+        'USER_NOT_FOUND': { status: 404, msg: 'Usuário não encontrado' },
+        'EMAIL_ALREADY_EXISTS': { status: 409, msg: 'Este email já está sendo usado por outro usuário' },
+        'PHONE_ALREADY_EXISTS': { status: 409, msg: 'Este telefone já está sendo usado por outro usuário' },
+        'NO_FIELDS_TO_UPDATE': { status: 400, msg: 'Nenhum campo válido para atualizar' }
+      };
 
-      if (error.message === 'USER_NOT_FOUND') {
-        return res.status(404).json({
-          success: false,
-          message: 'Usuário não encontrado'
-        });
+      // 2. Procura se a mensagem de erro do Model existe no nosso dicionário
+      const knownError = errorMap[error.message];
+
+      // 3. Se existir, usa as configurações do dicionário
+      if (knownError) {
+        return handleError(res, error, knownError.msg, 'UserController', knownError.status);
       }
 
-      if (error.message === 'EMAIL_ALREADY_EXISTS') {
-        return res.status(409).json({
-          success: false,
-          message: 'Este email já está sendo usado por outro usuário'
-        });
-      }
-
-      if (error.message === 'PHONE_ALREADY_EXISTS') {
-        return res.status(409).json({
-          success: false,
-          message: 'Este telefone já está sendo usado por outro usuário'
-        });
-      }
-
-      if (error.message === 'NO_FIELDS_TO_UPDATE') {
-        return res.status(400).json({
-          success: false,
-          message: 'Nenhum campo válido para atualizar'
-        });
-      }
-
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao atualizar perfil',
-        error: error.message
-      });
+      // 4. Se for um erro inesperado, usa o padrão 500
+      return handleError(res, error, 'Erro ao atualizar perfil', 'UserController');
     }
   }
 
@@ -160,10 +104,7 @@ class UserController {
       const user = await User.findById(userId);
 
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'Usuário não encontrado'
-        });
+        return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
       }
 
       return res.status(200).json({
@@ -173,17 +114,11 @@ class UserController {
           name: user.name,
           email: user.email,
           phone: user.phone,
-          avatar: user.avatar,
           createdAt: user.created_at
         }
       });
     } catch (error) {
-      console.error('Erro ao obter perfil:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao obter perfil do usuário',
-        error: error.message
-      });
+      return handleError(res, error, 'Erro ao obter perfil do usuário', 'UserController');
     }
   }
 }

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import BarberHeader from '../../components/BarberHeader/BarberHeader';
-import StatsCard from '../../components/StatsCard/StatsCard';
-import ScheduleList from '../../components/ScheduleList/ScheduleList';
-import BottomNav from '../../components/BottomNav/BottomNav';
-import { mockBarberData } from '../../constants/mockData';
-import { useBarberData } from '../../hooks/useBarberData';
+import BarberHeader from '../../../components/BarberHeader/BarberHeader';
+import StatsCard from '../../../components/StatsCard/StatsCard';
+import ScheduleList from '../../../components/ScheduleList/ScheduleList';
+import BottomNav from '../../../components/BottomNav/BottomNav';
+import { mockBarberData } from '../../../constants/mockData';
+import { useBarberData } from '../../../hooks/useBarberData';
 import './BarberDashboard.css';
 
 /**
