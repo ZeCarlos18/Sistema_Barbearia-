@@ -37,6 +37,16 @@ router.get('/barbers/:id',
 );
 
 /**
+ * Desativar barbeiro
+ * PUT /api/admin/barbers/:id/deactivate
+ */
+router.put('/barbers/:id/deactivate',
+  authenticate,
+  requireAdmin,
+  AdminController.deactivateBarber
+);
+
+/**
  * Excluir barbeiro
  * DELETE /api/admin/barbers/:id
  */

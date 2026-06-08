@@ -12,8 +12,10 @@ const adminRoutes = require('./routes/adminRoutes');
 const availableTimesRoutes = require('./routes/availableTimesRoutes');
 const unavailabilityRoutes = require('./routes/unavailabilityRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const reminderSettingsRoutes = require('./routes/reminderSettingsRoutes');
 const barberAvailabilityRoutes = require('./routes/barberAvailabilityRoutes');
 const barberRoutes = require('./routes/barberRoutes');
+const ReminderService = require('./services/ReminderService');
 
 const app = express();
 
@@ -77,6 +79,9 @@ app.use('/api/unavailabilities', unavailabilityRoutes);
 // Rotas de Notificações
 app.use('/api/notifications', notificationRoutes);
 
+// Rotas de Configuração de Lembretes
+app.use('/api/reminder-settings', reminderSettingsRoutes);
+
 // Rotas de Disponibilidade do Barbeiro
 app.use('/api/barber-availability', barberAvailabilityRoutes);
 
@@ -118,4 +123,5 @@ app.listen(PORT, () => {
   console.log(`  GET    /api/admin/barbers/:id - Detalhes barbeiro (requer autenticação)`);
   console.log(`  DELETE /api/admin/barbers/:id - Excluir barbeiro (requer autenticação)`);
   console.log(`  POST   /api/appointments/:id/confirm - Confirmar agendamento`);
+  ReminderService.startScheduler();
 });

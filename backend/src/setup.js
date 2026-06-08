@@ -41,6 +41,7 @@ async function setupDatabase() {
         password VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
         role ENUM('client', 'barber', 'admin') DEFAULT 'client',
+        active TINYINT(1) NOT NULL DEFAULT 1,
         avatar LONGBLOB NULL COMMENT 'Imagem do barbeiro em base64',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -48,6 +49,8 @@ async function setupDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     console.log('✅ Tabela "users" criada/verificada');
+
+    await connection.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS active TINYINT(1) NOT NULL DEFAULT 1');
 
     // Criar tabela de serviços
     await connection.query(`
@@ -115,6 +118,7 @@ async function setupDatabase() {
         user_id INT NOT NULL,
         barber_id INT NOT NULL,
         type VARCHAR(100) NOT NULL,
+        channel VARCHAR(50) NOT NULL DEFAULT 'push',
         title VARCHAR(255) NOT NULL,
         message TEXT NOT NULL,
         related_appointment_id INT,
@@ -129,6 +133,28 @@ async function setupDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     console.log('✅ Tabela "notifications" criada/verificada');
+
+    await connection.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS channel VARCHAR(50) NOT NULL DEFAULT 'push'`);
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS reminder_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        lead_time_minutes INT NOT NULL DEFAULT 60,
+        channel ENUM('email', 'push') NOT NULL DEFAULT 'email',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ Tabela "reminder_settings" criada/verificada');
+
+    const [settingsRows] = await connection.query('SELECT id FROM reminder_settings LIMIT 1');
+    if (settingsRows.length === 0) {
+      await connection.query(
+        'INSERT INTO reminder_settings (lead_time_minutes, channel, created_at, updated_at) VALUES (?, ?, NOW(), NOW())',
+        [process.env.REMINDER_LEAD_TIME_MINUTES || 60, process.env.REMINDER_CHANNEL || 'email']
+      );
+      console.log('✅ Configuração padrão de lembretes inserida');
+    }
 
     await connection.end();
     console.log('✅ Setup do banco de dados concluído!\n');

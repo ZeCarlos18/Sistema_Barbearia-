@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const BarberService = require('../services/BarberService');
 const { handleError } = require('../utils/errorHandler');
 
 /**
@@ -130,18 +131,12 @@ class AdminController {
    */
   static async getBarbers(req, res) {
     try {
-      const barbers = await User.findByRole('barber');
+      const barbers = await BarberService.getAdminBarberList();
 
       return res.status(200).json({
         success: true,
         total: barbers.length,
-        barbers: barbers.map(barber => ({
-          id: barber.id,
-          name: barber.name,
-          email: barber.email,
-          phone: barber.phone,
-          createdAt: barber.created_at
-        }))
+        barbers
       });
     } catch (error) {
       handleError(res, error, 'Erro ao listar barbeiros:', 'AdminController');
@@ -155,9 +150,41 @@ class AdminController {
   static async getBarberById(req, res) {
     try {
       const { id } = req.params;
+      const barberDetails = await BarberService.getBarberDetails(id);
 
-      const barber = await User.findById(id);
+      if (!barberDetails) {
+        return res.status(404).json({
+          success: false,
+          message: 'Barbeiro não encontrado'
+        });
+      }
 
+      return res.status(200).json({
+        success: true,
+        data: barberDetails
+      });
+    } catch (error) {
+      handleError(res, error, 'Erro ao obter barbeiro:', 'AdminController');
+    }
+  }
+
+  /**
+   * Desativar barbeiro
+   * PUT /api/admin/barbers/:id/deactivate
+   */
+  static async deactivateBarber(req, res) {
+    try {
+      const { id } = req.params;
+      const { confirm } = req.body;
+
+      if (confirm !== true && confirm !== 'true') {
+        return res.status(400).json({
+          success: false,
+          message: 'Confirmação obrigatória para desativar o barbeiro'
+        });
+      }
+
+      const barber = await BarberService.deactivateBarber(id);
       if (!barber) {
         return res.status(404).json({
           success: false,
@@ -165,27 +192,13 @@ class AdminController {
         });
       }
 
-      // Verificar se é realmente um barbeiro
-      if (barber.role !== 'barber') {
-        return res.status(404).json({
-          success: false,
-          message: 'Usuário encontrado não é um barbeiro'
-        });
-      }
-
       return res.status(200).json({
         success: true,
-        barber: {
-          id: barber.id,
-          name: barber.name,
-          email: barber.email,
-          phone: barber.phone,
-          role: barber.role,
-          createdAt: barber.created_at
-        }
+        message: 'Barbeiro desativado com sucesso',
+        barber
       });
     } catch (error) {
-      handleError(res, error, 'Erro ao obter barbeiro:', 'AdminController');
+      handleError(res, error, 'Erro ao desativar barbeiro:', 'AdminController');
     }
   }
 

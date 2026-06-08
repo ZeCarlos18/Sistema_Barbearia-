@@ -2,14 +2,14 @@ const pool = require('../database');
 
 class Notification {
   static async create(data) {
-    const { userId, barberId, type, title, message, relatedAppointmentId, status } = data;
+    const { userId, barberId, type, title, message, relatedAppointmentId, status, channel } = data;
     const connection = await pool.getConnection();
     
     try {
       const [result] = await connection.query(
-        `INSERT INTO notifications (user_id, barber_id, type, title, message, related_appointment_id, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-        [userId, barberId, type, title, message, relatedAppointmentId, status || 'unread']
+        `INSERT INTO notifications (user_id, barber_id, type, channel, title, message, related_appointment_id, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [userId, barberId, type, channel || 'push', title, message, relatedAppointmentId, status || 'unread']
       );
       
       return {
@@ -17,6 +17,7 @@ class Notification {
         userId,
         barberId,
         type,
+        channel: channel || 'push',
         title,
         message,
         relatedAppointmentId,
@@ -36,6 +37,20 @@ class Notification {
         [userId]
       );
       return rows;
+    } finally {
+      connection.release();
+    }
+  }
+
+  static async findByAppointmentIdAndType(relatedAppointmentId, type) {
+    const connection = await pool.getConnection();
+
+    try {
+      const [rows] = await connection.query(
+        'SELECT * FROM notifications WHERE related_appointment_id = ? AND type = ? LIMIT 1',
+        [relatedAppointmentId, type]
+      );
+      return rows.length > 0 ? rows[0] : null;
     } finally {
       connection.release();
     }

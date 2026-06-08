@@ -92,7 +92,7 @@ class User {
     
     try {
       const [users] = await connection.query(
-        'SELECT id, name, email, phone, role, created_at FROM users WHERE id = ?',
+        'SELECT id, name, email, phone, role, active, created_at FROM users WHERE id = ?',
         [id]
       );
       
@@ -135,16 +135,34 @@ class User {
    * @param {String} role - Role do usuário (barber, client, admin)
    * @returns {Array} Lista de usuários com a role especificada
    */
-  static async findByRole(role) {
+  static async findByRole(role, options = {}) {
     const connection = await pool.getConnection();
     
     try {
-      const [users] = await connection.query(
-        'SELECT id, name, email, phone, role, created_at FROM users WHERE role = ?',
-        [role]
-      );
-      
+      let sql = 'SELECT id, name, email, phone, role, active, created_at FROM users WHERE role = ?';
+      const params = [role];
+
+      if (role === 'barber' && !options.includeInactive) {
+        sql += ' AND active = 1';
+      }
+
+      const [users] = await connection.query(sql, params);
       return users;
+    } finally {
+      connection.release();
+    }
+  }
+
+  static async updateActive(id, active) {
+    const connection = await pool.getConnection();
+
+    try {
+      const [result] = await connection.query(
+        'UPDATE users SET active = ?, updated_at = NOW() WHERE id = ?',
+        [active ? 1 : 0, id]
+      );
+
+      return result.affectedRows > 0;
     } finally {
       connection.release();
     }

@@ -129,7 +129,34 @@ class Appointment {
     }
   }
 
-/**
+  /**
+   * Buscar agendamentos confirmados dentro de um intervalo de data/hora
+   * @param {String} startDateTime - Data/hora inicial no formato YYYY-MM-DD HH:mm:ss
+   * @param {String} endDateTime - Data/hora final no formato YYYY-MM-DD HH:mm:ss
+   * @returns {Array} Lista de agendamentos confirmados
+   */
+  static async findConfirmedBetween(startDateTime, endDateTime) {
+    const connection = await pool.getConnection();
+    
+    try {
+      const [rows] = await connection.query(`
+        SELECT a.*, u.name as user_name, u.email as user_email, b.name as barber_name, s.name as service_name, s.duration as service_duration
+        FROM appointments a
+        LEFT JOIN users u ON a.user_id = u.id
+        LEFT JOIN users b ON a.barber_id = b.id
+        LEFT JOIN services s ON a.service_id = s.id
+        WHERE a.status = 'confirmed'
+          AND STR_TO_DATE(CONCAT(a.date, ' ', a.time), '%Y-%m-%d %H:%i:%s') BETWEEN ? AND ?
+        ORDER BY a.date ASC, a.time ASC
+      `, [startDateTime, endDateTime]);
+      
+      return rows;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
    * Buscar agendamentos ativos do usuário
    * @param {Number} userId - ID do usuário
    * @returns {Array} Lista de agendamentos ativos (pending ou confirmed)
@@ -231,32 +258,6 @@ class Appointment {
         WHERE a.user_id = ? AND a.date = ?
         ORDER BY a.time ASC
       `, [userId, date]);
-      
-      return rows;
-    } finally {
-      connection.release();
-    }
-  }
-
-/**
-   * Buscar agendamentos ativos do usuário
-   * @param {Number} userId - ID do usuário
-   * @returns {Array} Lista de agendamentos ativos (pending ou confirmed)
-   */
-  static async findActiveByUserId(userId) {
-    const connection = await pool.getConnection();
-    
-    try {
-      const [rows] = await connection.query(`
-        SELECT a.*, b.name as barber_name, s.name as service_name
-        FROM appointments a
-        LEFT JOIN users b ON a.barber_id = b.id
-        LEFT JOIN services s ON a.service_id = s.id
-        WHERE a.user_id = ? 
-          AND a.status IN ('pending', 'confirmed')
-          AND a.date >= CURDATE()
-        ORDER BY a.date ASC, a.time ASC
-      `, [userId]);
       
       return rows;
     } finally {
