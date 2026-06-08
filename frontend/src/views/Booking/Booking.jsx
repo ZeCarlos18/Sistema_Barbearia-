@@ -4,6 +4,11 @@ import './Booking.css';
 import avatarImage from '../../assets/image.png';
 import AppointmentConfirmationModal from '../../components/Modal/AppointmentConfirmationModal';
 import { fetchServices, fetchBarbers, fetchAvailableTimes, createAppointment } from '../../services/bookingService';
+import { createWaitlistEntry } from '../../services/waitlistService';
+import WaitlistEntryPanel from '../../components/Waitlist/WaitlistEntryPanel';
+import WaitlistConfirmationModal from '../../components/Modal/WaitlistConfirmationModal';
+
+
 
 const weekdayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -47,6 +52,27 @@ export default function Booking({ onBack }) {
   const [confirmationData, setConfirmationData] = useState(null);
 
   const today = useMemo(() => startOfDay(new Date()), []);
+
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  const [waitlistConfirmationData, setWaitlistConfirmationData] = useState(null);
+  const [selectedUnavailableTime, setSelectedUnavailableTime] = useState('');
+
+  const waitlistCacheKey = useMemo(() => {
+    const barberId = String(selectedBarberId || '');
+    const dateISO = formatDateISO(selectedDate);
+    return `waitlist:${barberId}:${dateISO}`;
+  }, [selectedBarberId, selectedDate]);
+
+  const [alreadyInQueue, setAlreadyInQueue] = useState(false);
+
+  useEffect(() => {
+    if (!selectedUnavailableTime) return;
+    const raw = localStorage.getItem(waitlistCacheKey);
+    const list = raw ? JSON.parse(raw) : [];
+    setAlreadyInQueue(list.includes(String(selectedUnavailableTime)));
+  }, [selectedUnavailableTime, waitlistCacheKey]);
+
+
 
   // 1. Buscar Serviços e Barbeiros simultaneamente
   useEffect(() => {
@@ -176,9 +202,22 @@ export default function Booking({ onBack }) {
         <div className="booking-stage-title">
           {['ESCOLHER SERVIÇO', 'ESCOLHER BARBEIRO', 'ESCOLHER DATA', 'ESCOLHER HORÁRIO'][step]}
         </div>
+
+        <WaitlistConfirmationModal
+          isOpen={showWaitlistModal}
+          onClose={() => {
+            setShowWaitlistModal(false);
+            setWaitlistConfirmationData(null);
+            navigate('/home');
+          }}
+          waitlistData={waitlistConfirmationData}
+        />
+
         
         <div className="booking-phone">
-          <div className="booking-shell">
+        <div className="booking-shell">
+
+
             <header className="booking-header">
               <button className="booking-back" onClick={() => step > 0 ? setStep(s => s - 1) : onBack?.()} />
               <div className="booking-header-center"><span className="booking-header-label">NOVO AGENDAMENTO</span></div>
@@ -186,6 +225,11 @@ export default function Booking({ onBack }) {
             </header>
 
             <div className="booking-body">
+              {error && (
+  <div className="booking-error">
+    {error}
+  </div>
+)}
               {step === 0 && (
                 <section className="booking-section">
                   <HeaderTitle title="ESCOLHA O SERVIÇO" sub="Selecione o que deseja realizar" />
@@ -292,7 +336,20 @@ export default function Booking({ onBack }) {
                           <h3 className="slot-title">{group.title}</h3>
                           <div className="slot-grid">
                             {group.slots.map(t => (
-                              <button key={t} className={`slot-button ${selectedTime === t ? 'slot--selected' : (availableSet.has(t) ? 'slot--available' : 'slot--unavailable')}`} onClick={() => setSelectedTime(t)} disabled={!availableSet.has(t)}>
+                              <button
+                                key={t}
+                                className={`slot-button ${selectedTime === t ? 'slot--selected' : (availableSet.has(t) ? 'slot--available' : 'slot--unavailable')}`}
+                                onClick={() => {
+                                  if (availableSet.has(t)) {
+                                    setSelectedUnavailableTime('');
+                                    setSelectedTime(t);
+                                  } else {
+                                    // RF15: horário indisponível -> permitir entrar na lista de espera
+                                    setSelectedTime('');
+                                    setSelectedUnavailableTime(t);
+                                  }
+                                }}
+                              >
                                 {availableSet.has(t) ? t : <span className="slot-dot" />}
                               </button>
                             ))}
@@ -302,9 +359,62 @@ export default function Booking({ onBack }) {
                       
                       <div className="booking-confirm" style={{marginTop: 16}}>
                         {formError && <div className="booking-error">{formError}</div>}
-                        <button className="booking-cta" onClick={handleConfirmBooking} disabled={!selectedTime || confirming}>
-                          {confirming ? 'ENVIANDO...' : 'CONFIRMAR'}
-                        </button>
+
+                        {/* RF15: se usuário selecionou um horário indisponível, aparece "Entrar na Lista" e esconde CONFIRMAR */}
+                        {selectedUnavailableTime ? (
+                          <WaitlistEntryPanel
+                            selectedBarberId={selectedBarberId}
+                            selectedDateISO={formatDateISO(selectedDate)}
+                            selectedTime={selectedUnavailableTime}
+                            alreadyInQueue={alreadyInQueue}
+                            onSubmit={async ({ barberId, date, time }) => {
+                              const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+                              if (!user?.id) throw new Error('Faça login para entrar na lista de espera.');
+
+                              if (alreadyInQueue) throw new Error('Você já está na lista de espera para este período.');
+
+                              setFormError('');
+              
+                              try {
+                                const res = await createWaitlistEntry({
+                                  userId: user.id,
+                                  barberId: Number(barberId),
+                                  date,
+                                  time,
+                                });
+
+                                if (!res?.success && typeof res?.position !== 'number') {
+                                  throw new Error('Não foi possível entrar na lista de espera.');
+                                }
+
+                                setWaitlistConfirmationData({
+                                  barberName: barbers.find(b => String(b.id) === String(barberId))?.name,
+                                  date,
+                                  time,
+                                  position: res.position,
+                                });
+
+                                // cache visual de duplicidade no front
+                                const raw = localStorage.getItem(waitlistCacheKey);
+                                const list = raw ? JSON.parse(raw) : [];
+                                if (!list.includes(String(time))) {
+                                  list.push(String(time));
+                                  localStorage.setItem(waitlistCacheKey, JSON.stringify(list));
+                                }
+
+                                setShowWaitlistModal(true);
+                              } catch (err) {
+                                throw err;
+                              } finally {
+                                
+                              }
+                            }}
+                          />
+                        ) : (
+                          <button className="booking-cta" onClick={handleConfirmBooking} disabled={!selectedTime || confirming}>
+                            {confirming ? 'ENVIANDO...' : 'CONFIRMAR'}
+                          </button>
+                        )}
                       </div>
                     </>
                   )}
