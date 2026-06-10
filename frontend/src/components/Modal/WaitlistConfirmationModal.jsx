@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import './WaitlistConfirmationModal.css';
+import { FaCheck } from 'react-icons/fa';
 
 /**
  * Modal de confirmação ao entrar na lista de espera.
@@ -26,21 +27,20 @@ function WaitlistConfirmationModal({ isOpen, onClose, waitlistData }) {
       <div className="appointment-confirmation-modal">
         <div className="appointment-confirmation-modal__header">
           <h3>Você entrou na lista de espera!</h3>
-          <button className="appointment-confirmation-modal__close" onClick={onClose} aria-label="Fechar">
-            ×
-          </button>
+          <div className="waitlist-success-icon">
+            <FaCheck />
+          </div>
         </div>
 
         <div className="appointment-confirmation-modal__body">
-          <p>
-            {typeof position === 'number'
-              ? (
-                <>
-                  Sua posição na fila é <strong>#{position}</strong>.
-                </>
-              )
-              : 'Recebemos sua solicitação.'}
-          </p>
+          {typeof position === 'number' ? (
+            <div className="waitlist-position">
+              Sua posição na fila<br />
+              <strong>{position}</strong>
+            </div>
+          ) : (
+            <p>Recebemos sua solicitação.</p>
+          )}
 
           <div className="appointment-confirmation-modal__summary">
             <div className="appointment-confirmation-modal__row">

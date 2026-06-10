@@ -7,7 +7,7 @@ require('dotenv').config();
  */
 async function setupDatabase() {
   console.log('🔧 Inicializando banco de dados...');
-  
+
   try {
     if (!process.env.DB_USER || process.env.DB_PASSWORD === undefined) {
       throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
@@ -50,7 +50,7 @@ async function setupDatabase() {
     `);
     console.log('✅ Tabela "users" criada/verificada');
 
-    await connection.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS active TINYINT(1) NOT NULL DEFAULT 1');
+    //await connection.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS active TINYINT(1) NOT NULL DEFAULT 1');
 
     // Criar tabela de serviços
     await connection.query(`
@@ -134,7 +134,7 @@ async function setupDatabase() {
     `);
     console.log('✅ Tabela "notifications" criada/verificada');
 
-    await connection.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS channel VARCHAR(50) NOT NULL DEFAULT 'push'`);
+    //await connection.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS channel VARCHAR(50) NOT NULL DEFAULT 'push'`);
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS waitlist_entries (
@@ -158,12 +158,67 @@ async function setupDatabase() {
     `);
     console.log('✅ Tabela "waitlist_entries" criada/verificada');
 
-    await connection.query(`ALTER TABLE waitlist_entries ADD COLUMN IF NOT EXISTS notified_at TIMESTAMP NULL DEFAULT NULL`);
-    await connection.query(`ALTER TABLE waitlist_entries MODIFY COLUMN status ENUM('waiting', 'notified', 'cancelled', 'converted', 'expired') DEFAULT 'waiting'`);
-    await connection.query(`ALTER TABLE waitlist_entries ADD COLUMN IF NOT EXISTS manual_position INT NULL DEFAULT NULL`);
-    await connection.query(`ALTER TABLE waitlist_entries ADD COLUMN IF NOT EXISTS pending_position INT NULL DEFAULT NULL`);
-    await connection.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS waitlist_priority ENUM('arrival_order', 'haircut_count') DEFAULT 'arrival_order'`);
-    console.log('✅ Colunas de prioridade e posição manual em "waitlist_entries" criadas/verificadas');
+    //await connection.query(`ALTER TABLE waitlist_entries ADD COLUMN IF NOT EXISTS notified_at TIMESTAMP NULL DEFAULT NULL`);
+    await connection.query(`
+  ALTER TABLE waitlist_entries
+  MODIFY COLUMN status
+  ENUM('waiting', 'notified', 'cancelled', 'converted', 'expired')
+  DEFAULT 'waiting'
+`);
+    // Colunas adicionais em "waitlist_entries" (compatível com qualquer versão do MySQL)
+    // O MySQL nem sempre suporta "ADD COLUMN IF NOT EXISTS"; por isso verificamos via INFORMATION_SCHEMA.
+
+    // manual_position
+    const [manualPositionColumn] = await connection.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'waitlist_entries'
+        AND COLUMN_NAME = 'manual_position'
+    `, [process.env.DB_NAME || 'barbearia_db']);
+
+    if (!manualPositionColumn || manualPositionColumn.length === 0) {
+      await connection.query(`
+        ALTER TABLE waitlist_entries
+        ADD COLUMN manual_position INT NULL DEFAULT NULL
+      `);
+    }
+
+    // pending_position
+    const [pendingPositionColumn] = await connection.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'waitlist_entries'
+        AND COLUMN_NAME = 'pending_position'
+    `, [process.env.DB_NAME || 'barbearia_db']);
+
+    if (!pendingPositionColumn || pendingPositionColumn.length === 0) {
+      await connection.query(`
+        ALTER TABLE waitlist_entries
+        ADD COLUMN pending_position INT NULL DEFAULT NULL
+      `);
+    }
+
+    // waitlist_priority em users
+    const [waitlistPriorityColumn] = await connection.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'users'
+        AND COLUMN_NAME = 'waitlist_priority'
+    `, [process.env.DB_NAME || 'barbearia_db']);
+
+    if (!waitlistPriorityColumn || waitlistPriorityColumn.length === 0) {
+      await connection.query(`
+        ALTER TABLE users
+        ADD COLUMN waitlist_priority ENUM('arrival_order', 'haircut_count') DEFAULT 'arrival_order'
+      `);
+    }
+
+    console.log(
+      '✅ Colunas adicionais da fila de espera criadas/verificadas'
+    );
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS reminder_settings (
@@ -187,7 +242,7 @@ async function setupDatabase() {
 
     await connection.end();
     console.log('✅ Setup do banco de dados concluído!\n');
-    
+
   } catch (error) {
     console.error('❌ Erro ao fazer setup do banco de dados:');
     console.error('   Erro:', error.message);
