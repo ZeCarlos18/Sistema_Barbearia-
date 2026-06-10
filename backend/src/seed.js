@@ -10,7 +10,7 @@ async function seedDatabase() {
   console.log('🌱 Iniciando seed do banco de dados...\n');
   
   try {
-    if (!process.env.DB_USER || !process.env.DB_PASSWORD) {
+    if (!process.env.DB_USER || process.env.DB_PASSWORD == 'Undefined') {
       throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
     }
 

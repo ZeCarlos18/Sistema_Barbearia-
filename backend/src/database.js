@@ -2,7 +2,7 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Configuração da pool de conexão com MySQL
-if (!process.env.DB_USER || !process.env.DB_PASSWORD) {
+if (!process.env.DB_USER || process.env.DB_PASSWORD === undefined) {
   throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
 }
 

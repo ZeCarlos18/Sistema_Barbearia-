@@ -1,4 +1,5 @@
 const ReminderSetting = require('../models/ReminderSetting');
+const { handleError } = require('../utils/errorHandler');
 
 class ReminderSettingController {
   static async get(req, res) {
@@ -8,11 +9,9 @@ class ReminderSettingController {
         const defaultSettings = await ReminderSetting.createDefault();
         return res.json({ success: true, data: defaultSettings });
       }
-
       res.json({ success: true, data: settings });
     } catch (error) {
-      console.error('[ReminderSettingController] Erro ao buscar configurações de lembrete:', error);
-      res.status(500).json({ success: false, message: 'Erro ao buscar configurações de lembrete', error: error.message });
+      handleError(res, error, 'Erro ao buscar configurações de lembrete:', 'ReminderSettingController');
     }
   }
 
@@ -32,8 +31,7 @@ class ReminderSettingController {
       const updated = await ReminderSetting.update({ lead_time_minutes: parsedLeadTime, channel });
       res.json({ success: true, data: updated });
     } catch (error) {
-      console.error('[ReminderSettingController] Erro ao atualizar configurações de lembrete:', error);
-      res.status(500).json({ success: false, message: 'Erro ao atualizar configurações de lembrete', error: error.message });
+      handleError(res, error, 'Erro ao atualizar configurações de lembrete:', 'ReminderSettingController');
     }
   }
 }

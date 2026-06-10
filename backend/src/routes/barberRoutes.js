@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const BarberController = require('../controllers/BarberController');
+const { authenticate } = require('../middlewares/auth');
 
 /**
  * Rotas do Barbeiro
@@ -23,5 +24,7 @@ router.get('/:id/dashboard', BarberController.dashboard);
  * Body: { avatar: "data:image/png;base64,..." }
  */
 router.put('/:id/avatar', BarberController.updateAvatar);
+router.get('/:id/waitlist-priority', authenticate, BarberController.getWaitlistPriority);
+router.put('/:id/waitlist-priority', authenticate, BarberController.setWaitlistPriority);
 
 module.exports = router;

@@ -15,7 +15,9 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const reminderSettingsRoutes = require('./routes/reminderSettingsRoutes');
 const barberAvailabilityRoutes = require('./routes/barberAvailabilityRoutes');
 const barberRoutes = require('./routes/barberRoutes');
+const waitlistRoutes = require('./routes/waitListRoutes');
 const ReminderService = require('./services/ReminderService');
+const WaitlistExpiryService = require('./services/WaitlistExpiryService');
 
 const app = express();
 
@@ -88,6 +90,9 @@ app.use('/api/barber-availability', barberAvailabilityRoutes);
 // Rotas do Barbeiro (Dashboard consolidado)
 app.use('/api/barber', barberRoutes);
 
+// Rotas de Fila de Espera
+app.use('/api/waitlist', waitlistRoutes);
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -124,4 +129,5 @@ app.listen(PORT, () => {
   console.log(`  DELETE /api/admin/barbers/:id - Excluir barbeiro (requer autenticação)`);
   console.log(`  POST   /api/appointments/:id/confirm - Confirmar agendamento`);
   ReminderService.startScheduler();
+  WaitlistExpiryService.startScheduler();
 });

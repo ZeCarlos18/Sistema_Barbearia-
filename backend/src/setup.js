@@ -9,7 +9,7 @@ async function setupDatabase() {
   console.log('🔧 Inicializando banco de dados...');
   
   try {
-    if (!process.env.DB_USER || !process.env.DB_PASSWORD) {
+    if (!process.env.DB_USER || process.env.DB_PASSWORD === undefined) {
       throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
     }
 
@@ -135,6 +135,35 @@ async function setupDatabase() {
     console.log('✅ Tabela "notifications" criada/verificada');
 
     await connection.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS channel VARCHAR(50) NOT NULL DEFAULT 'push'`);
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS waitlist_entries (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        barber_id INT NOT NULL,
+        service_id INT NOT NULL,
+        date DATE NOT NULL,
+        time TIME NOT NULL,
+        status ENUM('waiting', 'notified', 'cancelled', 'converted', 'expired') DEFAULT 'waiting',
+        notified_at TIMESTAMP NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_user (user_id),
+        INDEX idx_barber_date_time (barber_id, date, time),
+        INDEX idx_status (status),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (barber_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    console.log('✅ Tabela "waitlist_entries" criada/verificada');
+
+    await connection.query(`ALTER TABLE waitlist_entries ADD COLUMN IF NOT EXISTS notified_at TIMESTAMP NULL DEFAULT NULL`);
+    await connection.query(`ALTER TABLE waitlist_entries MODIFY COLUMN status ENUM('waiting', 'notified', 'cancelled', 'converted', 'expired') DEFAULT 'waiting'`);
+    await connection.query(`ALTER TABLE waitlist_entries ADD COLUMN IF NOT EXISTS manual_position INT NULL DEFAULT NULL`);
+    await connection.query(`ALTER TABLE waitlist_entries ADD COLUMN IF NOT EXISTS pending_position INT NULL DEFAULT NULL`);
+    await connection.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS waitlist_priority ENUM('arrival_order', 'haircut_count') DEFAULT 'arrival_order'`);
+    console.log('✅ Colunas de prioridade e posição manual em "waitlist_entries" criadas/verificadas');
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS reminder_settings (

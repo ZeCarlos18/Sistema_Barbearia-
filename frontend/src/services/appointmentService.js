@@ -44,40 +44,6 @@ export async function getMyAppointments() {
 }
 
 /**
- * Buscar agendamentos passados e futuros
- * @returns {Promise<Object>} { upcoming: Array, past: Array }
- * @throws {Error} Erro na requisição
- */
-export async function getMyPastAndFutureAppointments() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-
-  if (!token) {
-    throw new Error('Token não encontrado. Usuário não autenticado.');
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/appointments/my/past-future`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `Erro ao buscar agendamentos: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data || { upcoming: [], past: [] };
-  } catch (error) {
-    console.error('Erro ao buscar agendamentos passados/futuros:', error);
-    throw error;
-  }
-}
-
-/**
  * Cancelar agendamento
  * @param {Number} appointmentId - ID do agendamento
  * @returns {Promise<Object>} Resposta da API
@@ -112,37 +78,3 @@ export async function cancelAppointment(appointmentId) {
   }
 }
 
-/**
- * Deletar agendamento
- * @param {Number} appointmentId - ID do agendamento
- * @returns {Promise<Object>} Resposta da API
- * @throws {Error} Erro na requisição
- */
-export async function deleteAppointment(appointmentId) {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-
-  if (!token) {
-    throw new Error('Token não encontrado. Usuário não autenticado.');
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/appointments/${appointmentId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `Erro ao deletar agendamento: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Erro ao deletar agendamento:', error);
-    throw error;
-  }
-}

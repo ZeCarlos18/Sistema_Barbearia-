@@ -20,7 +20,7 @@ class NotificationController {
         data: notifications
       });
     } catch (error) {
-      console.error('Erro ao buscar notificações:', 'NotificationController');
+      handleError(res, error, 'Erro ao buscar notificações:', 'NotificationController');
     }
   }
 

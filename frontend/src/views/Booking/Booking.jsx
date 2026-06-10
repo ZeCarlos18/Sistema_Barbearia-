@@ -58,9 +58,11 @@ export default function Booking({ onBack }) {
   const [selectedUnavailableTime, setSelectedUnavailableTime] = useState('');
 
   const waitlistCacheKey = useMemo(() => {
+    const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+    const userId = String(user?.id || '');
     const barberId = String(selectedBarberId || '');
     const dateISO = formatDateISO(selectedDate);
-    return `waitlist:${barberId}:${dateISO}`;
+    return `waitlist:${userId}:${barberId}:${dateISO}`;
   }, [selectedBarberId, selectedDate]);
 
   const [alreadyInQueue, setAlreadyInQueue] = useState(false);
@@ -377,8 +379,8 @@ export default function Booking({ onBack }) {
               
                               try {
                                 const res = await createWaitlistEntry({
-                                  userId: user.id,
                                   barberId: Number(barberId),
+                                  serviceId: Number(selectedServiceId),
                                   date,
                                   time,
                                 });

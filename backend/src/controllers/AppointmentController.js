@@ -1,5 +1,7 @@
 const Appointment = require('../models/Appointment');
 const Service = require('../models/Service');
+const Waitlist = require('../models/Waitlist');
+const Notification = require('../models/Notification');
 const { handleError } = require('../utils/errorHandler')
 
 // Função auxiliar para gerar a grade de horários da barbearia
@@ -134,25 +136,6 @@ class AppointmentController {
     }
   }
 
-  static async getAvailableSlots(req, res) {
-    try {
-      const { barberId } = req.params;
-      const { date } = req.query;
-
-      if (!barberId || !date) {
-        return res.status(400).json({ success: false, message: 'BarberId e date são obrigatórios' });
-      }
-
-      const allTimes = generateTimeSlots();
-      const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
-      const availableTimes = allTimes.filter(time => !occupiedTimes.includes(time));
-
-      res.json({ success: true, data: { barberId, date, availableTimes, total: availableTimes.length } });
-    } catch (error) {
-      handleError(res, error, 'Erro ao buscar slots disponíveis');
-    }
-  }
-
   static async findByDate(req, res) {
     try {
       const appointments = await Appointment.findByDate(req.params.date);
@@ -210,6 +193,28 @@ class AppointmentController {
       }
 
       const canceledAppointment = await Appointment.updateStatus(id, 'cancelled');
+
+      // Notificar o próximo na fila de espera para este slot
+      const appointmentTime = typeof appointment.time === 'string'
+        ? appointment.time.substring(0, 5)
+        : `${String(appointment.time.getHours()).padStart(2, '0')}:${String(appointment.time.getMinutes()).padStart(2, '0')}`;
+
+      const nextInQueue = await Waitlist.getFirstWaiting(appointment.barber_id, dateStr, appointmentTime);
+      if (nextInQueue) {
+        const timeoutMinutes = parseInt(process.env.WAITLIST_TIMEOUT_MINUTES) || 15;
+        await Waitlist.notifyEntry(nextInQueue.id);
+        await Notification.create({
+          userId: nextInQueue.user_id,
+          barberId: appointment.barber_id,
+          type: 'waitlist_notified',
+          channel: 'push',
+          title: 'Sua vez na fila de espera!',
+          message: `Uma vaga abriu para as ${appointmentTime} do dia ${dateStr}. Você tem ${timeoutMinutes} minutos para confirmar ou recusar.`,
+          relatedAppointmentId: null,
+          status: 'unread'
+        });
+      }
+
       res.json({ success: true, message: 'Agendamento cancelado com sucesso.', data: canceledAppointment });
     } catch (error) {
       handleError(res, error, 'Erro ao cancelar agendamento');

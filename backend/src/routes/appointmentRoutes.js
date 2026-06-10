@@ -10,7 +10,6 @@ router.get('/my/past-future', authenticate, AppointmentController.findMyPastAndF
 router.get('/barber/:barberId', AppointmentController.findByBarber);
 router.get('/date/:date', AppointmentController.findByDate);
 router.get('/available-times/:barberId', AppointmentController.getAvailableTimes);
-router.get('/available-slots/:barberId', AppointmentController.getAvailableSlots);
 router.get('/schedule/:barberId/date/:date', AppointmentController.getBarberSchedule);
 router.get('/schedule/:barberId/range', AppointmentController.getBarberScheduleByDateRange);
 router.get('/:id', AppointmentController.findById);
