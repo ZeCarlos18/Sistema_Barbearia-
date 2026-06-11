@@ -5,7 +5,8 @@ import './NotificationPanel.css';
 import {
   FiClock,
   FiCalendar,
-  FiBell
+  FiBell,
+  FiTrash2
 } from 'react-icons/fi';
 
 function timeAgo(dateStr) {
@@ -48,15 +49,6 @@ export default function NotificationPanel({ isOpen, onClose, onAppointmentConfir
 
       setNotifications(Array.isArray(data) ? data : []);
       setWaitlistEntries(Array.isArray(waitlist) ? waitlist : []);
-
-      setNotifications([{
-        id: 999,
-        type: 'waitlist_notified',
-        status: 'unread',
-        title: 'Vaga disponível',
-        message: 'Seu horário ficou disponível.',
-        created_at: new Date()
-      }]);
     } catch {
       setNotifications([]);
     } finally {
@@ -113,6 +105,9 @@ export default function NotificationPanel({ isOpen, onClose, onAppointmentConfir
   };
 
   const handleDismiss = async (notification) => {
+
+    console.log('DELETE NOTIFICATION:', notification);
+
     try {
       await markNotificationAsRead(notification.id);
       setNotifications(prev =>
@@ -167,7 +162,9 @@ export default function NotificationPanel({ isOpen, onClose, onAppointmentConfir
             <div className="notif-empty">Carregando...</div>
           ) : notifications.length === 0 ? (
             <div className="notif-empty">
-              <span className="notif-empty-icon">🔔</span>
+                <div className="notif-empty-icon">
+                  <FiBell />
+                </div>
               <p>Nenhuma notificação.</p>
             </div>
           ) : (
@@ -256,7 +253,8 @@ export default function NotificationPanel({ isOpen, onClose, onAppointmentConfir
                       className="waitlist-delete-btn"
                       onClick={() => handleDelete(n)}
                     >
-                      EXCLUIR NOTIFICAÇÃO
+                      <FiTrash2 />
+                      <span>Excluir notificação</span>
                     </button>
 
                   </div>
