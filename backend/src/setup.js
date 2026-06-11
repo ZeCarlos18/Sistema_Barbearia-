@@ -257,7 +257,7 @@ async function setupDatabase() {
 // Executar setup se for chamado diretamente
 if (require.main === module) {
   setupDatabase().then(() => {
-    console.log('🎉 Banco pronto! Agora você pode rodar: npm run dev');
+    console.log('Banco pronto! Agora você pode rodar: npm run dev');
     process.exit(0);
   });
 }

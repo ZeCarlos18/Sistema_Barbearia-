@@ -2,6 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getMyNotifications, markNotificationAsRead, deleteNotification } from '../../services/notificationService';
 import { getMyWaitlist, acceptWaitlistEntry, refuseWaitlistEntry } from '../../services/waitlistService';
 import './NotificationPanel.css';
+import {
+  FiClock,
+  FiCalendar,
+  FiBell
+} from 'react-icons/fi';
 
 function timeAgo(dateStr) {
   const diff = (Date.now() - new Date(dateStr)) / 1000;
@@ -12,14 +17,24 @@ function timeAgo(dateStr) {
 }
 
 function NotifIcon({ type }) {
-  if (type === 'waitlist_notified') return <span className="notif-icon notif-icon--alert">⏰</span>;
-  if (type === 'waitlist_converted') return <span className="notif-icon notif-icon--success">✅</span>;
-  if (type === 'appointment_cancelled') return <span className="notif-icon notif-icon--warn">❌</span>;
-  return <span className="notif-icon">🔔</span>;
+  if (type === 'waitlist_notified') {
+    return (
+      <div className="notif-icon notif-icon--gold">
+        <FiClock />
+      </div>
+    );
+  }
+
+  return (
+    <div className="notif-icon">
+      <FiBell />
+    </div>
+  );
 }
 
 export default function NotificationPanel({ isOpen, onClose, onAppointmentConfirmed }) {
   const [notifications, setNotifications] = useState([]);
+  const [waitlistEntries, setWaitlistEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [acting, setActing] = useState(null);
   const [feedback, setFeedback] = useState(null);
@@ -28,7 +43,20 @@ export default function NotificationPanel({ isOpen, onClose, onAppointmentConfir
     setLoading(true);
     try {
       const data = await getMyNotifications();
+
+      const waitlist = await getMyWaitlist();
+
       setNotifications(Array.isArray(data) ? data : []);
+      setWaitlistEntries(Array.isArray(waitlist) ? waitlist : []);
+
+      setNotifications([{
+        id: 999,
+        type: 'waitlist_notified',
+        status: 'unread',
+        title: 'Vaga disponível',
+        message: 'Seu horário ficou disponível.',
+        created_at: new Date()
+      }]);
     } catch {
       setNotifications([]);
     } finally {
@@ -104,6 +132,18 @@ export default function NotificationPanel({ isOpen, onClose, onAppointmentConfir
 
   const unreadCount = notifications.filter(n => n.status === 'unread').length;
 
+  const notifiedEntry = waitlistEntries.find(
+    entry => entry.status === 'notified'
+  );
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  const formatTime = (time) => {
+    return time?.slice(0, 5);
+  };
+
   return (
     <div className="notif-overlay" onClick={onClose}>
       <div className="notif-panel" onClick={e => e.stopPropagation()}>
@@ -133,42 +173,104 @@ export default function NotificationPanel({ isOpen, onClose, onAppointmentConfir
           ) : (
             notifications.map(n => (
               <div key={n.id} className={`notif-item ${n.status === 'unread' ? 'notif-item--unread' : ''}`}>
-                <div className="notif-item-top">
-                  <NotifIcon type={n.type} />
-                  <div className="notif-item-body">
-                    <div className="notif-item-row">
-                      <span className="notif-item-title">{n.title}</span>
-                      <span className="notif-item-time">{timeAgo(n.created_at)}</span>
+                {n.type !== 'waitlist_notified' && (
+                  <div className="notif-item-top">
+                    <NotifIcon type={n.type} />
+
+                    <div className="notif-item-body">
+                      <div className="notif-item-row">
+                        <span className="notif-item-title">{n.title}</span>
+                        <span className="notif-item-time">
+                          {timeAgo(n.created_at)}
+                        </span>
+                      </div>
+
+                      <p className="notif-item-msg">
+                        {n.message}
+                      </p>
                     </div>
-                    <p className="notif-item-msg">{n.message}</p>
+
+                    <button
+                      className="notif-item-delete"
+                      onClick={() => handleDelete(n)}
+                      aria-label="Remover"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <button className="notif-item-delete" onClick={() => handleDelete(n)} aria-label="Remover">✕</button>
-                </div>
+                )}
 
                 {n.type === 'waitlist_notified' && n.status === 'unread' && (
-                  <div className="notif-actions">
+                  <div className="waitlist-card">
+
+                    <h3 className="waitlist-card-title">
+                      {n.title}
+                    </h3>
+
+                    <p className="waitlist-card-message">
+                      {n.message}
+                    </p>
+
+                    <div className="waitlist-card-info">
+                      <span>
+                        {notifiedEntry
+                          ? `${formatDate(notifiedEntry.date)} às ${formatTime(notifiedEntry.time)}`
+                          : 'Horário indisponível'}
+                      </span>
+                      <br></br>
+                      <strong>
+                        Barbeiro: {notifiedEntry?.barber_name || 'Não informado'}
+                      </strong>
+                    </div>
+
+                    <div className="waitlist-warning">
+                      <FiClock />
+                      <span>
+                        Confirme em até 15 minutos para garantir sua vaga.
+                        Senão, ela será disponibilizada ao próximo cliente da fila.
+                      </span>
+                      
+                    </div>
+
                     <button
-                      className="notif-btn notif-btn--accept"
+                      className="waitlist-confirm-btn"
                       disabled={acting === n.id}
                       onClick={() => handleAccept(n)}
                     >
-                      {acting === n.id ? 'Aguarde...' : '✓ Aceitar vaga'}
+                      {acting === n.id ? 'AGUARDE...' : 'CONFIRMAR HORÁRIO'}
                     </button>
+
                     <button
-                      className="notif-btn notif-btn--refuse"
+                      className="waitlist-refuse-btn"
                       disabled={acting === n.id}
                       onClick={() => handleRefuse(n)}
                     >
-                      {acting === n.id ? 'Aguarde...' : '✕ Recusar'}
+                      RECUSAR VAGA
                     </button>
+
+                    <p className="waitlist-refuse-note">
+                      Ao recusar, a vaga será oferecida ao próximo cliente da fila.
+                    </p>
+
+                    <button
+                      className="waitlist-delete-btn"
+                      onClick={() => handleDelete(n)}
+                    >
+                      EXCLUIR NOTIFICAÇÃO
+                    </button>
+
                   </div>
                 )}
 
                 {n.type !== 'waitlist_notified' && n.status === 'unread' && (
-                  <button className="notif-read-btn" onClick={() => handleDismiss(n)}>
+                  <button
+                    className="notif-read-btn"
+                    onClick={() => handleDismiss(n)}
+                  >
                     Marcar como lida
                   </button>
                 )}
+
               </div>
             ))
           )}

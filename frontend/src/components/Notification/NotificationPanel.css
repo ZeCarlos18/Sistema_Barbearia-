@@ -219,3 +219,106 @@
 }
 
 .notif-read-btn:hover { color: #888; }
+
+.waitlist-card {
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 20px;
+  background: #0d0d0d;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.waitlist-card-title {
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.waitlist-card-message {
+  color: #d9d9d9;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+
+.waitlist-card-info {
+  background: #141414;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.waitlist-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f3f3f3;
+  margin-bottom: 10px;
+}
+
+.waitlist-card-row:last-child {
+  margin-bottom: 0;
+}
+
+.waitlist-card-row svg {
+  color: #d4af37;
+  font-size: 18px;
+}
+
+.waitlist-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #cfcfcf;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.waitlist-warning svg {
+  color: #d4af37;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.waitlist-confirm-btn {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: #006b45;
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.waitlist-confirm-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.waitlist-refuse-btn {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: #1d1d1d;
+  color: #d4d4d4;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.waitlist-refuse-btn:hover:not(:disabled) {
+  background: #252525;
+}
+
+.waitlist-refuse-note {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #7d7d7d;
+  text-align: center;
+}
