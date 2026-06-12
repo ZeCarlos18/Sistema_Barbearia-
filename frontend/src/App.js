@@ -13,6 +13,7 @@ import BarberDashboard from './views/Barber/BarberDashboard/BarberDashboard';
 import BarberChief from './views/Barber/BarberChief/BarberChief';
 import BarberCreate from './views/Barber/BarberCreate/BarberCreate';
 import Appointments from './views/Client/Appointments/Appointments';
+import BarberWaitlistPage from './views/Barber/BarberWaitlist/BarberWaitlistPage';
 
 
 function getStoredUser() {
@@ -67,6 +68,7 @@ function AppRoutes() {
     if (page === 'search') navigate('/barber-dashboard?tab=search');
     if (page === 'calendar') navigate('/barber-chief?section=availability');
     if (page === 'profile') navigate('/barber-chief?section=menu');
+    if (page === 'waitlist') navigate('/barber-waitlist');
   };
 
   return (
@@ -126,11 +128,20 @@ function AppRoutes() {
           <BarberChief onOpenCreate={() => navigate('/barber-create')} onLogout={handleLogout} />
         </ProtectedRoute>
       } />
+      <Route
+        path="/barber-waitlist"
+        element={
+          <ProtectedRoute allowedRoles={['barber', 'admin']}>
+            <BarberWaitlistPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/barber-create" element={
         <ProtectedRoute allowedRoles={['admin']}>
           <BarberCreate onBack={() => navigate('/barber-dashboard')} />
         </ProtectedRoute>
       } />
+      
 
       {/* Rota Fallback (Página 404 - Redireciona para o início) */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -138,7 +149,7 @@ function AppRoutes() {
   );
 }
 
-// 🚀 Ponto de Entrada da Aplicação
+//Ponto de Entrada da Aplicação
 function App() {
   return (
     <Router>

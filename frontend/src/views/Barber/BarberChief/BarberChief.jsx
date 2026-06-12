@@ -1,6 +1,6 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLock, FiLogOut, FiPlus, FiUser, FiUserX } from 'react-icons/fi';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLock, FiLogOut, FiPlus, FiUser, FiUserX, FiUsers } from 'react-icons/fi';
 import { fetchAppointmentsByDate } from '../../../services/dashboardService';
 import { createAppointment, fetchServices } from '../../../services/bookingService';
 import { createUnavailability, fetchBarberSchedule, fetchBarberUnavailabilities, updateAppointmentStatus } from '../../../services/availabilityService';
@@ -61,6 +61,7 @@ function formatMonthYearLabel(date) {
 
 export default function BarberChief({ onOpenCreate, onLogout }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const user = getStoredUser();
   const displayName = user.name || 'Lucas';
   const barberId = user.id || user.userId || user.barberId || user._id;
@@ -865,13 +866,26 @@ function isUnavailable(dateStr, timeStr = null) {
                       </span>
                     </button>
 
-                    <button type="button" className="chief-settings-item">
+                    <button
+                      type="button"
+                      className="chief-settings-item"
+                      onClick={() => navigate('/barber-waitlist')}
+                    >
                       <div className="chief-settings-item-left">
-                        <span className="chief-settings-icon"><FiUserX size={14} /></span>
-                        <span className="chief-settings-label">Desativar Barbeiros</span>
+                        <span className="chief-settings-icon">
+                          <FiUsers size={14} />
+                        </span>
+
+                        <span className="chief-settings-label">
+                          Gerenciar Lista de Espera
+                        </span>
                       </div>
+
                       <span className="chief-settings-end">
-                        <FiChevronRight className="chief-settings-chevron" size={16} />
+                        <FiChevronRight
+                          className="chief-settings-chevron"
+                          size={16}
+                        />
                       </span>
                     </button>
 
