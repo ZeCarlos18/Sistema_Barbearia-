@@ -1,8 +1,13 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getActiveNavItem } from '../../utils/navHelper';
 import TextField from '../../components/form/TextField';
+import BottomNav from '../../components/BottomNav/BottomNav';
 import './RecoverPassword.css';
 
 export default function RecoverPassword({ onBackToLogin }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = React.useState('');
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
@@ -56,6 +61,16 @@ export default function RecoverPassword({ onBackToLogin }) {
           </button>
         </form>
       </section>
+
+      <BottomNav 
+        active={getActiveNavItem(location.pathname)}
+        onNavigate={(page) => {
+          if (page === 'home') onBackToLogin();
+          else if (page === 'dashboard') navigate('/login');
+          else if (page === 'calendar') onBackToLogin();
+          else if (page === 'profile') navigate('/login');
+        }}
+      />
     </div>
   );
 }

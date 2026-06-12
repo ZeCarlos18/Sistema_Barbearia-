@@ -10,7 +10,7 @@ async function seedDatabase() {
   console.log('🌱 Iniciando seed do banco de dados...\n');
   
   try {
-    if (!process.env.DB_USER || process.env.DB_PASSWORD == 'Undefined') {
+    if (!process.env.DB_HOST || !process.env.DB_USER || process.env.DB_PASSWORD === undefined) {
       throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
     }
 
@@ -127,7 +127,16 @@ async function seedDatabase() {
     
   } catch (error) {
     console.error('❌ Erro ao fazer seed do banco de dados:');
-    console.error('   Erro:', error.message);
+    console.error('   Erro:', error?.message || error);
+    if (error?.code) {
+      console.error('   Código:', error.code);
+    }
+    if (error?.sqlMessage) {
+      console.error('   Detalhe MySQL:', error.sqlMessage);
+    }
+    if (error?.stack) {
+      console.error('\n   Stack:\n', error.stack);
+    }
     console.error('\n   Dicas:');
     console.error('   1. Rode "node src/setup.js" primeiro para criar as tabelas');
     console.error('   2. Verifique se o MySQL do XAMPP está rodando');

@@ -1,9 +1,13 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getActiveNavItem } from '../utils/navHelper';
 import PrimaryButton from '../components/PrimaryButton';
+import BottomNav from '../components/BottomNav/BottomNav';
 import './Welcome.css';
 import hero from '../assets/image.png'; 
 
 export default function Welcome({ onCreateAccount, onLogin }) {
+  const location = useLocation();
   return (
     <div className="welcome-root">
           <div className="hero-card" style={{ backgroundImage: `url(${hero})` }}>
@@ -17,6 +21,16 @@ export default function Welcome({ onCreateAccount, onLogin }) {
                   </div>
               </div>
           </div>
+
+      <BottomNav 
+        active={getActiveNavItem(location.pathname)}
+        onNavigate={(page) => {
+          if (page === 'home') onCreateAccount();
+          else if (page === 'dashboard') onLogin();
+          else if (page === 'calendar') onLogin();
+          else if (page === 'profile') onLogin();
+        }}
+      />
       </div>
   );
 }

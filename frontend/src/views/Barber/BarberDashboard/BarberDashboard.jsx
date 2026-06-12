@@ -38,6 +38,11 @@ function BarberDashboard() {
       return;
     }
 
+    if (item === 'dashboard') {
+      navigate('/dashboard-barbeiro');
+      return;
+    }
+
     if (item === 'search') {
       navigate('/barber-dashboard?tab=search');
       return;

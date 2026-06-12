@@ -1,9 +1,14 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getActiveNavItem } from '../../utils/navHelper';
 import TextField from '../../components/form/TextField';
 import { login } from '../../services/authService';
+import BottomNav from '../../components/BottomNav/BottomNav';
 import './Login.css';
 
 export default function Login({ onLoginSuccess, onGoToRegister, onGoToRecover }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = React.useState({ email: '', password: '', remember: true });
   const [errors, setErrors] = React.useState({});
   const [loading, setLoading] = React.useState(false);
@@ -130,6 +135,15 @@ export default function Login({ onLoginSuccess, onGoToRegister, onGoToRecover })
           </button>
         </form>
       </section>
+
+      <BottomNav 
+        active={getActiveNavItem(location.pathname)}
+        onNavigate={(page) => {
+          if (page === 'home' || page === 'dashboard') onGoToRegister();
+          else if (page === 'calendar') navigate('/');
+          else if (page === 'profile') onGoToRecover();
+        }}
+      />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import React from 'react';
-import { FiHome, FiSearch, FiCalendar, FiUser } from 'react-icons/fi';
+import { FiHome, FiLayout, FiSearch, FiCalendar, FiUser } from 'react-icons/fi';
 import './BottomNav.css';
 
 export default function BottomNav({ active = 'home', onNavigate }) {
   const items = [
     { id: 'home', label: 'Home', Icon: FiHome },
+    { id: 'dashboard', label: 'Dashboard', Icon: FiLayout },
     { id: 'search', label: 'Buscar', Icon: FiSearch },
     { id: 'calendar', label: 'Agenda', Icon: FiCalendar },
     { id: 'profile', label: 'Perfil', Icon: FiUser }

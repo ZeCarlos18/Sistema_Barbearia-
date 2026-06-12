@@ -1,6 +1,6 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLock, FiLogOut, FiPlus, FiUser, FiUserX } from 'react-icons/fi';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLayout, FiLock, FiLogOut, FiPlus, FiUser, FiUserX } from 'react-icons/fi';
 import { fetchAppointmentsByDate } from '../../../services/dashboardService';
 import { createAppointment, fetchServices } from '../../../services/bookingService';
 import { createUnavailability, fetchBarberSchedule, fetchBarberUnavailabilities, updateAppointmentStatus } from '../../../services/availabilityService';
@@ -59,8 +59,9 @@ function formatMonthYearLabel(date) {
   return formatted.replace(' de ', ' ').replace(/^./, (letter) => letter.toUpperCase());
 }
 
-export default function BarberChief({ onOpenCreate, onLogout }) {
+export default function BarberChief({ onOpenCreate, onLogout, onOpenDashboard }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const user = getStoredUser();
   const displayName = user.name || 'Lucas';
   const barberId = user.id || user.userId || user.barberId || user._id;
@@ -244,6 +245,16 @@ React.useEffect(() => {
       return;
     }
 
+    if (id === 'dashboard') {
+      setActiveNav('dashboard');
+      if (typeof onOpenDashboard === 'function') {
+        onOpenDashboard();
+      } else {
+        navigate('/dashboard-barbeiro');
+      }
+      return;
+    }
+
     setActiveNav(id);
   }
 
@@ -356,7 +367,7 @@ function isUnavailable(dateStr, timeStr = null) {
         appointment
       };
     });
-  }, [availabilityAppointments, availabilityDate, availabilityUnavailabilities]);
+  }, [availabilityAppointments, availabilityDate, availabilityUnavailabilities, isSlotUnavailable]);
 
   function handleSlotSelect(slot) {
     setSelectedSlot(slot);
@@ -865,7 +876,7 @@ function isUnavailable(dateStr, timeStr = null) {
                       </span>
                     </button>
 
-                    <button type="button" className="chief-settings-item">
+                    <button type="button" className="chief-settings-item" onClick={onOpenDashboard}>
                       <div className="chief-settings-item-left">
                         <span className="chief-settings-icon"><FiUserX size={14} /></span>
                         <span className="chief-settings-label">Desativar Barbeiros</span>
@@ -1087,6 +1098,16 @@ function isUnavailable(dateStr, timeStr = null) {
 
               <button
                 type="button"
+                className={`chief-nav-btn chief-nav-btn--dashboard ${activeNav === 'dashboard' ? 'is-active' : ''}`}
+                onClick={() => handleNavClick('dashboard')}
+                aria-label="Dashboard"
+              >
+                <FiLayout size={18} />
+                <span>Dashboard</span>
+              </button>
+
+              <button
+                type="button"
                 className={`chief-nav-btn chief-nav-btn--agenda ${activeNav === 'agenda' ? 'is-active' : ''}`}
                 onClick={() => handleNavClick('agenda')}
                 aria-label="Agenda"
@@ -1117,6 +1138,8 @@ function isUnavailable(dateStr, timeStr = null) {
           </div>
         </div>
       </div>
+
+      {/* BottomNav removido: navegação consolidada no nav superior */}
     </div>
   );
 }

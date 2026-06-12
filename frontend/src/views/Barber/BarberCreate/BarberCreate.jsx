@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getActiveNavItem } from "../../../utils/navHelper";
 import { FiArrowLeft, FiPlus } from "react-icons/fi";
 import { createBarber } from "../../../services/adminService";
+import BottomNav from "../../../components/BottomNav/BottomNav";
 import "./BarberCreate.css";
 
 const weekDays = Array.from({ length: 7 }).map((_, i) => ({
@@ -23,6 +26,8 @@ const initialState = {
 };
 
 export default function BarberCreate({ onBack }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState(initialState);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
   const [loading, setLoading] = useState(false);
@@ -281,6 +286,15 @@ export default function BarberCreate({ onBack }) {
           </main>
         </div>
       </div>
+
+      <BottomNav 
+        active={getActiveNavItem(location.pathname)}
+        onNavigate={(page) => {
+          if (page === 'dashboard') navigate('/dashboard-barbeiro');
+          else if (page === 'home') navigate('/barber-dashboard');
+          else if (page === 'profile') navigate('/barber-chief?section=menu');
+        }}
+      />
     </div>
   );
 }

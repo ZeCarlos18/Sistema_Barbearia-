@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getActiveNavItem } from '../../utils/navHelper';
 import './Booking.css';
 import avatarImage from '../../assets/image.png';
 import AppointmentConfirmationModal from '../../components/Modal/AppointmentConfirmationModal';
+import BottomNav from '../../components/BottomNav/BottomNav';
 import { fetchServices, fetchBarbers, fetchAvailableTimes, createAppointment } from '../../services/bookingService';
 import { createWaitlistEntry } from '../../services/waitlistService';
 import WaitlistEntryPanel from '../../components/Waitlist/WaitlistEntryPanel';
@@ -31,6 +33,7 @@ const getServiceVariant = (name) => {
 
 export default function Booking({ onBack }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(0);
   const [services, setServices] = useState([]);
   const [barbers, setBarbers] = useState([]);
@@ -428,6 +431,17 @@ export default function Booking({ onBack }) {
 
         <AppointmentConfirmationModal isOpen={showConfirmation} onClose={() => { setShowConfirmation(false); navigate('/home'); }} appointmentData={confirmationData} />
       </div>
+
+      <BottomNav 
+        active={getActiveNavItem(location.pathname)}
+        onNavigate={(page) => {
+          if (page === 'home') navigate('/home');
+          else if (page === 'dashboard') navigate('/home');
+          else if (page === 'calendar') navigate('/appointments');
+          else if (page === 'profile') navigate('/profile');
+          else if (page === 'search') navigate('/home');
+        }}
+      />
     </div>
   );
 }

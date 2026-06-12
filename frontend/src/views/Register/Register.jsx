@@ -1,7 +1,10 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getActiveNavItem } from '../../utils/navHelper';
 import PrimaryButton from '../../components/PrimaryButton';
 import TextField from '../../components/form/TextField';
 import { register } from '../../services/authService';
+import BottomNav from '../../components/BottomNav/BottomNav';
 import './Register.css';
 
 const initialForm = {
@@ -12,6 +15,8 @@ const initialForm = {
 };
 
 export default function Register({ onBack }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = React.useState(initialForm);
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
@@ -123,6 +128,15 @@ async function handleSubmit(event) {
           </button>
         </form>
       </section>
+
+      <BottomNav 
+        active={getActiveNavItem(location.pathname)}
+        onNavigate={(page) => {
+          if (page === 'home' || page === 'dashboard') onBack();
+          else if (page === 'calendar') navigate('/login');
+          else if (page === 'profile') onBack();
+        }}
+      />
     </div>
   );
 }

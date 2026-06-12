@@ -11,6 +11,7 @@ import Booking from './views/Booking/Booking';
 import ClientSettings from './views/Client/ClientSettings/ClientSettings';
 import BarberDashboard from './views/Barber/BarberDashboard/BarberDashboard';
 import BarberChief from './views/Barber/BarberChief/BarberChief';
+import DashboardBarbeiro from './views/Barber/DashboardBarbeiro/DashboardBarbeiro';
 import BarberCreate from './views/Barber/BarberCreate/BarberCreate';
 import Appointments from './views/Client/Appointments/Appointments';
 
@@ -57,12 +58,22 @@ function AppRoutes() {
   };
 
   const handleClientNavigate = (page) => {
+    if (page === 'dashboard') {
+      navigate('/home');
+      return;
+    }
+
     if (page === 'home') navigate('/home');
     if (page === 'calendar') navigate('/appointments');
     if (page === 'profile') navigate('/profile');
   };
 
   const handleBarberNavigate = (page) => {
+    if (page === 'dashboard') {
+      navigate(user?.role === 'admin' ? '/dashboard-barbeiro' : '/barber-dashboard');
+      return;
+    }
+
     if (page === 'home') navigate('/barber-dashboard');
     if (page === 'search') navigate('/barber-dashboard?tab=search');
     if (page === 'calendar') navigate('/barber-chief?section=availability');
@@ -74,7 +85,7 @@ function AppRoutes() {
       {/* --- ROTAS PÚBLICAS --- */}
       <Route path="/" element={
         token && user ? (
-          <Navigate to={user.role === 'admin' || user.role === 'barber' ? '/barber-dashboard' : '/home'} replace />
+          <Navigate to={user.role === 'admin' ? '/dashboard-barbeiro' : user.role === 'barber' ? '/barber-dashboard' : '/home'} replace />
         ) : (
           <Welcome onCreateAccount={() => navigate('/register')} onLogin={() => navigate('/login')} />
         )
@@ -83,7 +94,8 @@ function AppRoutes() {
       <Route path="/login" element={
         <Login
           onLoginSuccess={(userData) => {
-            if (userData?.role === 'admin' || userData?.role === 'barber') navigate('/barber-dashboard');
+            if (userData?.role === 'admin') navigate('/dashboard-barbeiro');
+            else if (userData?.role === 'barber') navigate('/barber-dashboard');
             else navigate('/home');
           }}
           onGoToRegister={() => navigate('/register')}
@@ -121,9 +133,14 @@ function AppRoutes() {
           <BarberDashboard onNavigate={handleBarberNavigate} />
         </ProtectedRoute>
       } />
+      <Route path="/dashboard-barbeiro" element={
+        <ProtectedRoute allowedRoles={['barber', 'admin']}>
+          <DashboardBarbeiro />
+        </ProtectedRoute>
+      } />
       <Route path="/barber-chief" element={
         <ProtectedRoute allowedRoles={['barber', 'admin']}>
-          <BarberChief onOpenCreate={() => navigate('/barber-create')} onLogout={handleLogout} />
+          <BarberChief onOpenCreate={() => navigate('/barber-create')} onOpenDashboard={() => navigate('/dashboard-barbeiro')} onLogout={handleLogout} />
         </ProtectedRoute>
       } />
       <Route path="/barber-create" element={

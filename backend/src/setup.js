@@ -9,7 +9,7 @@ async function setupDatabase() {
   console.log('🔧 Inicializando banco de dados...');
 
   try {
-    if (!process.env.DB_USER || process.env.DB_PASSWORD === undefined) {
+    if (!process.env.DB_HOST || !process.env.DB_USER || process.env.DB_PASSWORD === undefined) {
       throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
     }
 
@@ -245,7 +245,16 @@ async function setupDatabase() {
 
   } catch (error) {
     console.error('❌ Erro ao fazer setup do banco de dados:');
-    console.error('   Erro:', error.message);
+    console.error('   Erro:', error?.message || error);
+    if (error?.code) {
+      console.error('   Código:', error.code);
+    }
+    if (error?.sqlMessage) {
+      console.error('   Detalhe MySQL:', error.sqlMessage);
+    }
+    if (error?.stack) {
+      console.error('\n   Stack:\n', error.stack);
+    }
     console.error('\n   Dicas:');
     console.error('   1. Verifique se o MySQL do XAMPP está rodando');
     console.error('   2. Verifique o arquivo .env está correto');
