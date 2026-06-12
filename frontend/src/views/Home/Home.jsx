@@ -2,7 +2,7 @@ import React from 'react';
 import './Home.css';
 import banner from '../../assets/image.png';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import { FiTrash2 } from 'react-icons/fi';
+import { FiTrash2, FiBell } from 'react-icons/fi';
 import { fetchMyAppointments, cancelAppointment } from '../../services/dashboardService';
 import { getUnreadCount } from '../../services/notificationService';
 import NotificationPanel from '../../components/Notification/NotificationPanel';
@@ -129,7 +129,7 @@ export default function Home({ onStartBooking, onNavigate }) {
               aria-label="Notificações"
               onClick={() => setShowNotifications(true)}
             >
-              🔔
+              <FiBell />
               {unreadCount > 0 && (
                 <span className="home-notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
               )}
