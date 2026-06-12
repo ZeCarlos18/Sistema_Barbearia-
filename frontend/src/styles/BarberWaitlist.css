@@ -199,3 +199,21 @@
   cursor: pointer;
 }
 
+.waitlist-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.waitlist-subtitle {
+  margin-top: 8px;
+}
+
+.waitlist-criteria-select {
+  margin-top: 24px;
+  width: fit-content;
+}
+
+
+.waitlist-priority-badge {
+  margin-top: 10px;
+}

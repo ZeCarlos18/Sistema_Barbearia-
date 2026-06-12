@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import WaitlistHeader from '../../../components/Waitlist/WaitlistHeader';
 import WaitlistSlotSelector from '../../../components/Waitlist/WaitlistSlotSelector';
 import WaitlistEntryPanelBarber from '../../../components/Waitlist/WaitlistEntryPanelBarber';
 import '../../../styles/BarberWaitlist.css';
+import { getWaitlistSlots } from '../../../services/waitlistService';
 
 export default function BarberWaitlistPage() {
 
@@ -37,6 +38,24 @@ export default function BarberWaitlistPage() {
       waitingTime: '5 min'
     }
   ]);
+
+  useEffect(() => {
+    async function load() {
+
+      const user =
+        JSON.parse(localStorage.getItem('user'));
+
+      const result =
+        await getWaitlistSlots(
+          user.id,
+          '2026-06-12'
+        );
+
+      console.log('SLOTS:', result);
+    }
+
+    load();
+  }, []);
 
   return (
     <div className="barber-waitlist-page">
