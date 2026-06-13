@@ -36,3 +36,37 @@
   font-size: 0.7rem;
   font-weight: 700;
 }
+
+/* central create button */
+.bottom-nav__item--create {
+  flex: 0 0 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: transparent;
+  display: inline-grid;
+  place-items: center;
+  box-shadow: none;
+  transform: none;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.bottom-nav__item--create.is-active {
+  background: #d4af37;
+  color: #111111;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  transform: translateY(-6px);
+}
+
+.bottom-nav__item--create span { display: none; }
+
+/* enforce ordering so plus stays centered */
+.bottom-nav__item--home { order: 1; }
+.bottom-nav__item--dashboard { order: 2; }
+.bottom-nav__item--create { order: 3; margin: 0 auto; }
+.bottom-nav__item--calendar { order: 4; }
+.bottom-nav__item--profile { order: 5; }
+
+/* ensure non-create items flex properly */
+.bottom-nav__item:not(.bottom-nav__item--create) {
+  flex: 1;
+}

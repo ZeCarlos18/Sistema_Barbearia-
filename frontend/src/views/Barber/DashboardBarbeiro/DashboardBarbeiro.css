@@ -303,6 +303,89 @@
   letter-spacing: 0.05em;
 }
 
+/* Toggle chip buttons */
+.dashboard-mobile-chip-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: rgba(246, 241, 228, 0.88);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-mobile-chip-btn.is-active {
+  background: linear-gradient(180deg, rgba(230,190,60,0.12), rgba(230,190,60,0.06));
+  color: #e0bc3d;
+  border: 1px solid rgba(224,188,61,0.18);
+}
+
+/* Schedule section */
+.dashboard-mobile-schedule {
+  margin-top: 12px;
+  padding: 12px;
+  background: linear-gradient(180deg, #0f0f0f 0%, #0c0c0c 100%);
+  border: 1px solid rgba(217,174,44,0.16);
+  border-radius: 12px;
+}
+
+.dashboard-mobile-schedule-title {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  color: #fff;
+}
+
+.dashboard-mobile-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard-mobile-schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+.dashboard-mobile-schedule-time {
+  width: 56px;
+  color: #e0bc3d;
+  font-weight: 800;
+}
+
+.dashboard-mobile-schedule-info strong {
+  display: block;
+  color: #f6f1e4;
+}
+
+.dashboard-mobile-schedule-meta {
+  font-size: 0.72rem;
+  color: rgba(246,241,228,0.6);
+}
+
+.dashboard-mobile-schedule-status {
+  margin-left: auto;
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 8px;
+  text-transform: capitalize;
+  color: #111;
+  background: rgba(230,194,61,0.9);
+}
+
+.dashboard-mobile-schedule-status.pending { background: rgba(255, 193, 7, 0.9); color: #111; }
+.dashboard-mobile-schedule-status.confirmed { background: rgba(14, 165, 105, 0.9); color: #fff; }
+.dashboard-mobile-schedule-status.completed { background: rgba(96,165,250,0.9); color: #fff; }
+.dashboard-mobile-schedule-status.cancelled { background: rgba(239,68,68,0.9); color: #fff; }
+
 .dashboard-mobile-nav {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

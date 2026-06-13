@@ -15,6 +15,7 @@
 
 import React from 'react';
 import { FiBell } from 'react-icons/fi';
+import ReminderSettings from '../../../components/ReminderSettings/ReminderSettings';
 import FilterTabs from '../../../components/FilterTabs/FilterTabs';
 import AppointmentCard from '../../../components/AppointmentCard/AppointmentCard';
 import EmptyState from '../../../components/EmptyState/EmptyState';
@@ -52,6 +53,17 @@ export default function Appointments({ onNavigate, onLogout }) {
   };
 
   const user = getStoredUser();
+
+  // Reminder settings modal
+  const [reminderOpen, setReminderOpen] = React.useState(false);
+  const [reminderSettings, setReminderSettings] = React.useState(() => {
+    try {
+      const raw = localStorage.getItem('reminderSettings');
+      return raw ? JSON.parse(raw) : { lead: '1h', appChannel: true, emailChannel: false };
+    } catch (e) {
+      return { lead: '1h', appChannel: true, emailChannel: false };
+    }
+  });
 
   /**
    * Efeito: Buscar agendamentos ao carregar a página
@@ -171,13 +183,19 @@ export default function Appointments({ onNavigate, onLogout }) {
 
             <button
               className="appointments-notification-btn"
-              onClick={() => {/* Notificações em Fase 2 */}}
+              onClick={() => setReminderOpen(true)}
               type="button"
               aria-label="Notificações"
               title="Notificações"
             >
               <FiBell size={22} />
             </button>
+            <ReminderSettings
+              isOpen={reminderOpen}
+              onClose={() => setReminderOpen(false)}
+              initial={reminderSettings}
+              onSave={(cfg) => setReminderSettings(cfg)}
+            />
           </header>
 
           {/* --- MAIN CONTENT --- */}

@@ -12,6 +12,7 @@ import { deactivateBarber, fetchBarberDetails, fetchBarbers } from '../../../ser
 import './DashboardBarbeiro.css';
 
 
+// fallback/demo data — not used if backend returns real data
 const fallbackBarbers = [
   { id: 1, name: 'Rafael', avatar: 'https://i.pravatar.cc/120?img=12', active: true },
   { id: 2, name: 'Felipe', avatar: 'https://i.pravatar.cc/120?img=13', active: true },
@@ -19,39 +20,15 @@ const fallbackBarbers = [
 ];
 
 const fallbackDetails = {
-  1: {
-    barber: { id: 1, name: 'Rafael', active: true },
-    metrics: { appointments: 56, revenue: 1500, completed: 56 },
-    chartTitle: 'Cortes Realizados',
-    chartData: [
-      { label: 'JAN', value: 14 },
-      { label: 'FEV', value: 16 },
-      { label: 'MAR', value: 18 },
-      { label: 'ABR', value: 8 }
-    ],
-    schedule: []
-  },
   2: {
-    barber: { id: 2, name: 'Felipe', active: true },
-    metrics: { appointments: 62, revenue: 1500, completed: 56 },
+    barber: { id: 2, name: 'Felipe', active: true, avatar: 'https://i.pravatar.cc/120?img=13' },
+    metrics: { appointments: 0, revenue: 0, completed: 0 },
     chartTitle: 'Cortes Realizados',
     chartData: [
-      { label: 'JAN', value: 14 },
-      { label: 'FEV', value: 16 },
-      { label: 'MAR', value: 18 },
-      { label: 'ABR', value: 8 }
-    ],
-    schedule: []
-  },
-  3: {
-    barber: { id: 3, name: 'João', active: true },
-    metrics: { appointments: 62, revenue: 1500, completed: 56 },
-    chartTitle: 'Cortes Realizados',
-    chartData: [
-      { label: 'JAN', value: 14 },
-      { label: 'FEV', value: 16 },
-      { label: 'MAR', value: 18 },
-      { label: 'ABR', value: 8 }
+      { label: 'JAN', value: 0 },
+      { label: 'FEV', value: 0 },
+      { label: 'MAR', value: 0 },
+      { label: 'ABR', value: 0 }
     ],
     schedule: []
   }
@@ -96,11 +73,16 @@ export default function DashboardBarbeiro() {
   const [activeNav, setActiveNav] = React.useState('dashboard');
 
 
-  const [barbers, setBarbers] = React.useState(fallbackBarbers);
-  const [selectedBarberId, setSelectedBarberId] = React.useState(2);
-  const [selectedBarberDetails, setSelectedBarberDetails] = React.useState(getDisplayDetails(2));
+  const [barbers, setBarbers] = React.useState([]);
+  const [selectedBarberId, setSelectedBarberId] = React.useState(null);
+  const [selectedBarberDetails, setSelectedBarberDetails] = React.useState(null);
   const [showDeactivateModal, setShowDeactivateModal] = React.useState(false);
+  const [showScheduleSection, setShowScheduleSection] = React.useState(false);
+  const [chartMode, setChartMode] = React.useState('cuts'); // 'cuts' or 'revenue'
   const [actionState, setActionState] = React.useState({ loading: false, error: '', success: '' });
+  const [loadingBarbers, setLoadingBarbers] = React.useState(true);
+  const [loadingDetails, setLoadingDetails] = React.useState(false);
+  const [loadError, setLoadError] = React.useState('');
 
   React.useEffect(() => {
     let isMounted = true;
@@ -109,7 +91,6 @@ export default function DashboardBarbeiro() {
       try {
         const list = await fetchBarbers();
         if (!isMounted) return;
-
         const normalized = Array.isArray(list) && list.length > 0
           ? list.map((barber, index) => ({
               id: barber.id || index + 1,
@@ -117,7 +98,7 @@ export default function DashboardBarbeiro() {
               avatar: barber.avatar || fallbackBarbers[index % fallbackBarbers.length].avatar,
               active: barber.active !== false
             }))
-          : fallbackBarbers;
+          : [];
 
         setBarbers(normalized);
 
@@ -125,10 +106,13 @@ export default function DashboardBarbeiro() {
         if (preferred) {
           setSelectedBarberId(Number(preferred.id));
         }
+        setLoadingBarbers(false);
       } catch (error) {
         if (!isMounted) return;
-        setBarbers(fallbackBarbers);
-        setSelectedBarberId(2);
+        setLoadError(error.message || 'Erro ao carregar barbeiros');
+        setBarbers([]);
+        setSelectedBarberId(null);
+        setLoadingBarbers(false);
       }
     }
 
@@ -158,7 +142,8 @@ export default function DashboardBarbeiro() {
     let isMounted = true;
 
     async function loadDetails() {
-
+      if (!selectedBarberId) return;
+      setLoadingDetails(true);
       try {
         const details = await fetchBarberDetails(selectedBarberId);
         if (!isMounted) return;
@@ -166,8 +151,12 @@ export default function DashboardBarbeiro() {
         if (details) {
           const detailsBarber = details.barber || {};
           const statistics = details.statistics || {};
-          const chartEntries = details.chartData?.cutsByDate
+          const cutsEntries = details.chartData?.cutsByDate
             ? Object.entries(details.chartData.cutsByDate).map(([label, value]) => ({ label: label.toUpperCase().slice(0, 3), value: Number(value) || 0 }))
+            : getDisplayDetails(selectedBarberId).chartData;
+
+          const revenueEntries = details.chartData?.revenueByDate
+            ? Object.entries(details.chartData.revenueByDate).map(([label, value]) => ({ label: label.toUpperCase().slice(0, 3), value: Number(value) || 0 }))
             : getDisplayDetails(selectedBarberId).chartData;
 
           setSelectedBarberDetails({
@@ -183,16 +172,19 @@ export default function DashboardBarbeiro() {
               completed: Number(statistics.completedAppointments) || getDisplayDetails(selectedBarberId).metrics.completed
             },
             chartTitle: 'Cortes Realizados',
-            chartData: chartEntries.length > 0 ? chartEntries : getDisplayDetails(selectedBarberId).chartData,
+            chartDataCuts: cutsEntries.length > 0 ? cutsEntries : getDisplayDetails(selectedBarberId).chartData,
+            chartDataRevenue: revenueEntries.length > 0 ? revenueEntries : getDisplayDetails(selectedBarberId).chartData,
             schedule: Array.isArray(details.schedule) ? details.schedule : []
           });
-          return;
+        } else {
+          setSelectedBarberDetails(getDisplayDetails(selectedBarberId));
         }
-
-        setSelectedBarberDetails(getDisplayDetails(selectedBarberId));
       } catch (error) {
         if (!isMounted) return;
+        setLoadError(error.message || 'Erro ao carregar detalhes');
         setSelectedBarberDetails(getDisplayDetails(selectedBarberId));
+      } finally {
+        setLoadingDetails(false);
       }
     }
 
@@ -203,14 +195,19 @@ export default function DashboardBarbeiro() {
     };
   }, [selectedBarberId, barbers]);
 
-  const selectedBarber = selectedBarberDetails?.barber || getDisplayDetails(selectedBarberId).barber;
-  const selectedMetrics = selectedBarberDetails?.metrics || getDisplayDetails(selectedBarberId).metrics;
-  const chartData = selectedBarberDetails?.chartData || getDisplayDetails(selectedBarberId).chartData;
+  const selectedBarber = selectedBarberDetails?.barber || (selectedBarberId ? getDisplayDetails(selectedBarberId).barber : { id: null, name: '', avatar: fallbackBarbers[0].avatar });
+  const selectedMetrics = selectedBarberDetails?.metrics || { appointments: 0, revenue: 0, completed: 0 };
+  const chartData = selectedBarberDetails?.chartData || getDisplayDetails(selectedBarberId || 2).chartData;
   const chartTitle = selectedBarberDetails?.chartTitle || 'Cortes Realizados';
+  const chartDataCuts = selectedBarberDetails?.chartDataCuts || getDisplayDetails(selectedBarberId || 2).chartData;
+  const chartDataRevenue = selectedBarberDetails?.chartDataRevenue || getDisplayDetails(selectedBarberId || 2).chartData;
+  const selectedChartData = chartMode === 'revenue' ? chartDataRevenue : chartDataCuts;
 
   function handleSelectBarber(barber) {
     setSelectedBarberId(Number(barber.id));
     setSelectedBarberDetails(getDisplayDetails(Number(barber.id)));
+    // hide schedule section when selecting another barber
+    setShowScheduleSection(false);
   }
 
   // Navbar (BottomNav)
@@ -267,7 +264,7 @@ export default function DashboardBarbeiro() {
     }
   }
 
-  const maxBarValue = Math.max(...chartData.map((item) => item.value), 1);
+  const maxBarValue = Math.max(...selectedChartData.map((item) => item.value), 1);
 
   return (
     <div className="dashboard-mobile-page">
@@ -294,29 +291,37 @@ export default function DashboardBarbeiro() {
             <h2>Lista de Barbeiros</h2>
 
             <div className="dashboard-mobile-barbers" role="list" aria-label="Lista de barbeiros">
-              {barbers.slice(0, 3).map((barber) => {
-                const isSelected = Number(barber.id) === Number(selectedBarberId);
-                return (
-                  <button
-                    key={barber.id}
-                    type="button"
-                    className={`dashboard-mobile-barber ${isSelected ? 'is-selected' : ''}`}
-                    onClick={() => handleSelectBarber(barber)}
-                    role="listitem"
-                  >
-                    <div className="dashboard-mobile-barber-photo-wrap">
-                      <img
-                        src={barber.avatar}
-                        alt={barber.name}
-                        className="dashboard-mobile-barber-photo"
-                        loading="lazy"
-                      />
-                      {isSelected ? <span className="dashboard-mobile-barber-badge"><FiCheck size={11} /></span> : null}
-                    </div>
-                    <span>{barber.name}</span>
-                  </button>
-                );
-              })}
+              {loadingBarbers ? (
+                <div className="dashboard-mobile-loading">Carregando barbeiros...</div>
+              ) : loadError ? (
+                <div className="dashboard-mobile-error">{loadError}</div>
+              ) : barbers.length === 0 ? (
+                <div className="dashboard-mobile-empty">Nenhum barbeiro encontrado.</div>
+              ) : (
+                barbers.slice(0, 3).map((barber) => {
+                  const isSelected = Number(barber.id) === Number(selectedBarberId);
+                  return (
+                    <button
+                      key={barber.id}
+                      type="button"
+                      className={`dashboard-mobile-barber ${isSelected ? 'is-selected' : ''}`}
+                      onClick={() => handleSelectBarber(barber)}
+                      role="listitem"
+                    >
+                      <div className="dashboard-mobile-barber-photo-wrap">
+                        <img
+                          src={barber.avatar}
+                          alt={barber.name}
+                          className="dashboard-mobile-barber-photo"
+                          loading="lazy"
+                        />
+                        {isSelected ? <span className="dashboard-mobile-barber-badge"><FiCheck size={11} /></span> : null}
+                      </div>
+                      <span>{barber.name}</span>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </section>
 
@@ -336,7 +341,17 @@ export default function DashboardBarbeiro() {
           </section>
 
           <section className="dashboard-mobile-actions">
-            <button type="button" className="dashboard-mobile-button dashboard-mobile-button--primary" onClick={() => agendaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+            <button
+              type="button"
+              className="dashboard-mobile-button dashboard-mobile-button--primary"
+              onClick={() => {
+                setShowScheduleSection(true);
+                // scroll to schedule section
+                setTimeout(() => {
+                  agendaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 80);
+              }}
+            >
               VER AGENDA
             </button>
             <button type="button" className="dashboard-mobile-button dashboard-mobile-button--outline" onClick={() => setShowDeactivateModal(true)}>
@@ -345,16 +360,20 @@ export default function DashboardBarbeiro() {
           </section>
 
           <section className="dashboard-mobile-filter">
-            <button type="button" className="dashboard-mobile-chip">
-              <FiScissors size={12} />
-              <span>{chartTitle}</span>
-              <FiChevronDown size={12} />
-            </button>
+            <div className="dashboard-mobile-chip" role="tablist" aria-label="Selecionar métrica do gráfico">
+              <button type="button" className={`dashboard-mobile-chip-btn ${chartMode === 'cuts' ? 'is-active' : ''}`} onClick={() => setChartMode('cuts')}>
+                <FiScissors size={12} />
+                <span>Cortes Realizados</span>
+              </button>
+              <button type="button" className={`dashboard-mobile-chip-btn ${chartMode === 'revenue' ? 'is-active' : ''}`} onClick={() => setChartMode('revenue')}>
+                <span>Faturamento</span>
+              </button>
+            </div>
           </section>
 
           <section className="dashboard-mobile-chart-card">
             <div className="dashboard-mobile-chart-bars">
-              {chartData.map((item) => (
+              {selectedChartData.map((item) => (
                 <div key={item.label} className="dashboard-mobile-chart-column">
                   <strong>{item.value}</strong>
                   <div className="dashboard-mobile-chart-track">
@@ -365,6 +384,28 @@ export default function DashboardBarbeiro() {
               ))}
             </div>
           </section>
+
+          {showScheduleSection && (
+            <section className="dashboard-mobile-schedule" aria-label="Agenda do barbeiro">
+              <h3 className="dashboard-mobile-schedule-title">Agenda de {selectedBarber.name}</h3>
+              {Array.isArray(selectedBarberDetails.schedule) && selectedBarberDetails.schedule.length > 0 ? (
+                <div className="dashboard-mobile-schedule-list">
+                  {selectedBarberDetails.schedule.map((apt) => (
+                    <div key={apt.id} className="dashboard-mobile-schedule-item">
+                      <div className="dashboard-mobile-schedule-time">{String(apt.time || '').slice(0,5)}</div>
+                      <div className="dashboard-mobile-schedule-info">
+                        <strong>{apt.userName || 'Cliente'}</strong>
+                        <div className="dashboard-mobile-schedule-meta">{apt.serviceName || 'Serviço'} • {apt.date}</div>
+                      </div>
+                      <div className={`dashboard-mobile-schedule-status ${apt.status || ''}`}>{apt.status}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="dashboard-mobile-empty">Nenhum agendamento encontrado para este barbeiro.</div>
+              )}
+            </section>
+          )}
         </main>
 
         <BottomNav active={activeNav} onNavigate={(id) => handleNavigate(id)} />

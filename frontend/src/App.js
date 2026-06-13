@@ -69,6 +69,13 @@ function AppRoutes() {
   };
 
   const handleBarberNavigate = (page) => {
+    if (page === 'create') {
+      // only admins can access barber creation route
+      if (user?.role === 'admin') {
+        navigate('/barber-create');
+      }
+      return;
+    }
     if (page === 'dashboard') {
       navigate(user?.role === 'admin' ? '/dashboard-barbeiro' : '/barber-dashboard');
       return;
