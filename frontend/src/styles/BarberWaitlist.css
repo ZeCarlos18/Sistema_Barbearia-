@@ -120,17 +120,6 @@
   min-height: 82px;
 }
 
-.waitlist-pending-alert {
-  margin: 12px 0;
-  padding: 10px 14px;
-  background: rgba(212, 175, 55, 0.15);
-  border: 1px solid rgba(212, 175, 55, 0.4);
-  color: #D4AF37;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .waitlist-move-buttons {
   display: flex;
   flex-direction: column;
@@ -216,4 +205,36 @@
 
 .waitlist-priority-badge {
   margin-top: 10px;
+}
+
+.waitlist-success-message {
+  margin: 16px 0;
+  padding: 12px;
+  border-radius: 10px;
+
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid rgba(46, 204, 113, 0.4);
+
+  color: #2ECC71;
+  font-weight: 600;
+  text-align: center;
+}
+
+.waitlist-back-btn {
+  background: transparent;
+  border: none;
+  color: #D4AF37;
+  font-size: 24px;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+
+  margin-bottom: 12px;
+
+  transition: 0.2s;
+}
+
+.waitlist-back-btn:hover {
+  transform: translateX(-4px);
 }

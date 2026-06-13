@@ -4,6 +4,22 @@ export default function WaitlistCard({
   onMoveUp,
   onMoveDown
 }) {
+
+    function formatWaitingTime(minutes) {
+
+        const hours = Math.floor(minutes / 60);
+
+        const remainingMinutes =
+            minutes % 60;
+
+        if (hours <= 0) {
+            return `${remainingMinutes} min`;
+        }
+
+        return `${hours}h ${remainingMinutes}min`;
+    }
+
+
   return (
    <div className="waitlist-card">
 
@@ -12,14 +28,19 @@ export default function WaitlistCard({
           </div>
 
           <div className="waitlist-content">
-              <strong>{entry.name}</strong>
+              <strong>{entry.user_name}</strong>
 
               <span>
-                  Horário desejado: {entry.requestedTime}
+                  Serviço: {entry.service_name}
               </span>
 
               <span>
-                  Na fila há {entry.waitingTime}
+                  Horário: {entry.time?.slice(0, 5)}
+              </span>
+
+
+              <span>
+                  Esperando há {formatWaitingTime(entry.minutes_waiting)}
               </span>
           </div>
 

@@ -236,7 +236,6 @@ npm test           # Executar testes
 
 - Comando para rodar o Frontend: npm start dev
 - Instalar a biblioteca de ícones: npm install react-icons
-- Instalar a biblioteca para o Drag e Drop: npm install @hello-pangea/dnd
 
 
 

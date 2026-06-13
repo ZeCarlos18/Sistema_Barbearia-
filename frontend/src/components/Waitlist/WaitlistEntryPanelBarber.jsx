@@ -4,7 +4,8 @@ export default function WaitlistEntryPanelBarber({
   entries,
   setEntries,
   hasChanges,
-  setHasChanges
+  setHasChanges,
+  onConfirm
 }) {
 
   const moveUp = (index) => {
@@ -33,7 +34,6 @@ export default function WaitlistEntryPanelBarber({
 
   return (
     <div>
-
       <div className="waitlist-priority-badge">
         Tempo de Espera
       </div>
@@ -51,6 +51,7 @@ export default function WaitlistEntryPanelBarber({
       {hasChanges && (
         <button
           className="waitlist-confirm-btn"
+          onClick={onConfirm}
         >
           CONFIRMAR ALTERAÇÕES
         </button>

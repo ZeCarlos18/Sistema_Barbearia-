@@ -1,9 +1,20 @@
+import { FiArrowLeft } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import '../../styles/BarberWaitlist.css';
 
 export default function WaitlistHeader() {
+  const navigate = useNavigate();
+
   return (
     <div className="waitlist-header">
          
+      <button
+        className="waitlist-back-btn"
+        onClick={() => navigate('/barber/profile')}
+      >
+        <FiArrowLeft />
+      </button>
+
       <h1 className="waitlist-title">
         Fila de Espera
       </h1>

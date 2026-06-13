@@ -1,6 +1,5 @@
-import css from '../../styles/BarberWaitlist.css';
-
 export default function WaitlistSlotSelector({
+  slots,
   selectedSlot,
   onChange
 }) {
@@ -11,10 +10,16 @@ export default function WaitlistSlotSelector({
       onChange={(e) => onChange(e.target.value)}
       className="waitlist-slot-selector"
     >
-      <option value="14:30">14:30</option>
-      <option value="15:00">15:00</option>
-      <option value="15:30">15:30</option>
-      <option value="16:00">16:00</option>
+      {slots.map((slot) => (
+        <option
+          key={slot.time}
+          value={slot.time}
+        >
+          {slot.time.slice(0, 5)}
+          {' '}
+          ({slot.waiting_count})
+        </option>
+      ))}
     </select>
   );
 }
