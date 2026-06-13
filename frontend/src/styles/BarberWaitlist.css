@@ -238,3 +238,32 @@
 .waitlist-back-btn:hover {
   transform: translateX(-4px);
 }
+
+.waitlist-empty-state {
+  margin-top: 60px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  color: #fff;
+}
+
+.waitlist-empty-icon {
+  font-size: 56px;
+  margin-bottom: 20px;
+}
+
+.waitlist-empty-state h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.waitlist-empty-state p {
+  color: #9ca3af;
+  font-size: 14px;
+  max-width: 260px;
+  line-height: 1.6;
+}

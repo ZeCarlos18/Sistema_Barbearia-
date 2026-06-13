@@ -5,6 +5,7 @@ import WaitlistSlotSelector from '../../../components/Waitlist/WaitlistSlotSelec
 import WaitlistEntryPanelBarber from '../../../components/Waitlist/WaitlistEntryPanelBarber';
 import '../../../styles/BarberWaitlist.css';
 import { getWaitlistSlots, getSlotWaitlist, savePendingPositions, confirmReorder } from '../../../services/waitlistService';
+import { FiUsers } from 'react-icons/fi';
 
 export default function BarberWaitlistPage() {
 
@@ -15,6 +16,10 @@ export default function BarberWaitlistPage() {
   const [slots, setSlots] = useState([]);
   const [successMessage, setSuccessMessage] =
   useState('');
+  const today =
+  new Date().toISOString().split('T')[0];
+  const [locked, setLocked] = useState(false);
+  console.log('TODAY:', today);
 
   useEffect(() => {
     async function load() {
@@ -27,7 +32,7 @@ export default function BarberWaitlistPage() {
       const result =
         await getWaitlistSlots(
           user.id,
-          '2026-06-11'
+          today
         );
 
         setSlots(result);
@@ -57,7 +62,7 @@ export default function BarberWaitlistPage() {
       const queueData =
         await getSlotWaitlist(
           user.id,
-          '2026-06-11',
+          today,
           selectedSlot
         );
 
@@ -89,14 +94,14 @@ export default function BarberWaitlistPage() {
 
   await savePendingPositions(
     user.id,
-    '2026-06-11',
+    today,
     selectedSlot,
     positions
   );
 
   const result = await confirmReorder(
     user.id,
-    '2026-06-11',
+    today,
     selectedSlot
   );
 
@@ -131,13 +136,36 @@ export default function BarberWaitlistPage() {
         </div>
       )}
 
-      <WaitlistEntryPanelBarber
-        entries={queue}
-        setEntries={setQueue}
-        hasChanges={hasChanges}
-        setHasChanges={setHasChanges}
-        onConfirm={handleConfirmChanges}
-      />
+      {queue.length === 0 ? (
+
+  <div className="waitlist-empty-state">
+
+          <div className="waitlist-empty-icon">
+              <FiUsers />
+          </div>
+
+          <h3>
+            Nenhum cliente na fila
+          </h3>
+
+          <p>
+            Não existem clientes aguardando
+            na lista de espera até o momento.
+          </p>
+
+        </div>
+
+      ) : (
+
+        <WaitlistEntryPanelBarber
+          entries={queue}
+          setEntries={setQueue}
+          hasChanges={hasChanges}
+          setHasChanges={setHasChanges}
+          onConfirm={handleConfirmChanges}
+        />
+
+      )}
 
     </div>
   );
