@@ -2,8 +2,21 @@ import { FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/BarberWaitlist.css';
 
-export default function WaitlistHeader() {
+export default function WaitlistHeader({
+  selectedDate,
+  setSelectedDate,
+  sortCriterion,
+  setSortCriterion
+}) {
   const navigate = useNavigate();
+
+  const user =
+    JSON.parse(
+      localStorage.getItem('user')
+    );
+
+  const barberName =
+    user?.name || 'Barbeiro';
 
   return (
     <div className="waitlist-header">
@@ -19,15 +32,46 @@ export default function WaitlistHeader() {
         Fila de Espera
       </h1>
 
-      <span className="waitlist-subtitle">
-        Sáb 13 Abr - Lucas
+      <span className="waitlist-barber-name">
+        {barberName}
       </span>
 
-      <select className="waitlist-criteria-select">
-        <option>Critérios da Lista</option>
-        <option>Tempo de Espera</option>
-        <option>Quantidade de Cortes</option>
-      </select>
+      <div className="waitlist-filters">
+        <input
+        className="waitlist-date-input"
+          type="date"
+          value={selectedDate}
+          onChange={(e) =>
+            setSelectedDate(
+              e.target.value
+            )
+          }
+        />
+
+        <select
+          className="waitlist-sort-select"
+          value={sortCriterion}
+          onChange={(e) =>
+            setSortCriterion(
+              e.target.value
+            )
+          }
+        >
+
+          <option value="waiting_time">
+            Tempo de Espera
+          </option>
+
+          <option value="position">
+            Posição Atual
+          </option>
+
+          <option value="arrival">
+            Ordem de Entrada
+          </option>
+
+        </select>
+      </div>
 
     </div>
   );
