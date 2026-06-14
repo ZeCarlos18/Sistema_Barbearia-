@@ -303,3 +303,49 @@
   filter: invert(1);
   cursor: pointer;
 }
+
+.waitlist-error {
+  margin: 12px 0;
+
+  padding: 12px;
+
+  background: rgba(255, 59, 48, 0.12);
+
+  border: 1px solid rgba(255, 59, 48, 0.35);
+
+  color: #ff6b6b;
+
+  border-radius: 12px;
+
+  text-align: center;
+
+  font-size: 14px;
+}
+
+.waitlist-loading {
+
+  margin-top: 20px;
+
+  padding: 20px;
+
+  text-align: center;
+
+  color: #d4af37;
+
+  font-weight: 600;
+
+}
+
+.waitlist-active-criterion {
+
+  margin-top: 10px;
+
+  margin-bottom: 15px;
+
+  color: #d4af37;
+
+  font-size: 13px;
+
+  text-align: center;
+
+}

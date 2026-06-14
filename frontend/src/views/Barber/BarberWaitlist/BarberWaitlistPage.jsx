@@ -32,30 +32,48 @@ export default function BarberWaitlistPage() {
   const [locked, setLocked] = useState(false);
   console.log('TODAY:', selectedDate);
 
+  const [loading, setLoading] =
+  useState(false);
+
+  const [error, setError] =
+  useState('');
+
   useEffect(() => {
     async function load() {
+      try{
+        setLoading(true);
+        setError('');
 
-      const user =
-        JSON.parse(localStorage.getItem('user'));
+        const user =
+          JSON.parse(localStorage.getItem('user'));
 
         console.log('USER:', user);
 
-      const result =
-        await getWaitlistSlots(
-          user.id,
-          selectedDate
-        );
+        const result =
+          await getWaitlistSlots(
+            user.id,
+            selectedDate
+          );
 
         setSlots(result);
 
-      if (result.length > 0) {
-        setSelectedSlot(result[0].time);
+        if (result.length > 0) {
+          setSelectedSlot(result[0].time);
+        }
+
+        console.log(result);
+
+        console.log('SLOTS:', result);
+
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          'Erro ao carregar horários da lista de espera.'
+        );
+      } finally {
+        setLoading(false);
       }
-
-      console.log(result);
-
-      console.log('SLOTS:', result);
-
     }
 
     load();
@@ -66,31 +84,44 @@ export default function BarberWaitlistPage() {
     if (!selectedSlot) return;
 
     async function loadQueue() {
+      try {
+        setLoading(true);
+        setError('');
 
-      const user =
-        JSON.parse(localStorage.getItem('user'));
+        const user =
+          JSON.parse(localStorage.getItem('user'));
 
-      const queueData =
-        await getSlotWaitlist(
-          user.id,
-          selectedDate,
-          selectedSlot
+        const queueData =
+          await getSlotWaitlist(
+            user.id,
+            selectedDate,
+            selectedSlot
+          );
+
+        console.log(
+          'QUEUE FULL:',
+          queueData
         );
 
-      console.log(
-        'QUEUE FULL:',
-        queueData
-      );
+        setQueue(
+          queueData.entries || []
+        );
 
-      setQueue(
-        queueData.entries || []
-      );
+        setLocked(
+          queueData.locked || false
+        );
+        console.log('LOCKED:', queueData.locked);
 
-      setLocked(
-        queueData.locked || false
-      );
-      console.log('LOCKED:', queueData.locked);
-    }
+      } catch (err) {
+        console.error(err);
+        setError(
+          'Erro ao carregar a fila de espera.'
+        );
+
+      } finally {
+        setLoading(false);
+      }
+    } 
 
     loadQueue();
 
@@ -169,8 +200,6 @@ if (sortCriterion === 'arrival') {
   return (
     <div className="barber-waitlist-page">
 
-
-
       <WaitlistHeader
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
@@ -179,6 +208,38 @@ if (sortCriterion === 'arrival') {
       />
 
       <hr className="waitlist-divider" />
+
+      {error && (
+
+        <div className="waitlist-error">
+
+          {error}
+
+        </div>
+
+      )}
+
+      <div className="waitlist-counter">
+        {queue.length} cliente(s) na fila
+      </div>
+
+      <div className="waitlist-active-criterion">
+
+        Ordenando por:
+
+        <strong>
+
+          {
+            sortCriterion === 'waiting_time'
+              ? ' Tempo de Espera'
+              : sortCriterion === 'position'
+                ? ' Posição Atual'
+                : ' Ordem de Entrada'
+          }
+
+        </strong>
+
+      </div>
 
       <WaitlistSlotSelector
         slots={slots}
@@ -192,12 +253,18 @@ if (sortCriterion === 'arrival') {
         </div>
       )}
 
-      {queue.length === 0 ? (
+      {loading ? (
 
-  <div className="waitlist-empty-state">
+        <div className="waitlist-loading">
+          Carregando lista de espera...
+        </div>
+
+      ) : queue.length === 0 ? (
+
+        <div className="waitlist-empty-state">
 
           <div className="waitlist-empty-icon">
-              <FiUsers />
+            <FiUsers />
           </div>
 
           <h3>
@@ -225,5 +292,6 @@ if (sortCriterion === 'arrival') {
       )}
 
     </div>
+
   );
 }
