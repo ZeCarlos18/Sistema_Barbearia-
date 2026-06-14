@@ -267,3 +267,8 @@
   max-width: 260px;
   line-height: 1.6;
 }
+
+.waitlist-move-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

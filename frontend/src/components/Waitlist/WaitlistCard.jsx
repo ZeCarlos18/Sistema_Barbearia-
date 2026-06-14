@@ -2,7 +2,8 @@ export default function WaitlistCard({
   position,
   entry,
   onMoveUp,
-  onMoveDown
+  onMoveDown,
+  locked
 }) {
 
     function formatWaitingTime(minutes) {
@@ -48,6 +49,7 @@ export default function WaitlistCard({
               <button
                   className="waitlist-move-btn"
                   onClick={onMoveUp}
+                  disabled={locked}
               >
                   ↑
               </button>
@@ -55,6 +57,7 @@ export default function WaitlistCard({
               <button
                   className="waitlist-move-btn"
                   onClick={onMoveDown}
+                    disabled={locked}
               >
                   ↓
               </button>

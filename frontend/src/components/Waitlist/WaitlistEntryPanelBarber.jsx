@@ -5,10 +5,14 @@ export default function WaitlistEntryPanelBarber({
   setEntries,
   hasChanges,
   setHasChanges,
-  onConfirm
+  onConfirm,
+  locked
 }) {
 
   const moveUp = (index) => {
+
+    if (locked) return;
+
     if (index === 0) return;
 
     const updated = [...entries];
@@ -21,6 +25,7 @@ export default function WaitlistEntryPanelBarber({
   };
 
   const moveDown = (index) => {
+    if (locked) return;
     if (index === entries.length - 1) return;
 
     const updated = [...entries];
@@ -31,6 +36,7 @@ export default function WaitlistEntryPanelBarber({
     setEntries(updated);
     setHasChanges(true);
   };
+
 
   return (
     <div>
@@ -45,6 +51,7 @@ export default function WaitlistEntryPanelBarber({
           position={index + 1}
           onMoveUp={() => moveUp(index)}
           onMoveDown={() => moveDown(index)}
+          locked={locked}
         />
       ))}
 

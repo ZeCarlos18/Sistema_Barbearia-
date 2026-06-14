@@ -74,6 +74,11 @@ export default function BarberWaitlistPage() {
       setQueue(
         queueData.entries || []
       );
+
+      setLocked(
+        queueData.locked || false
+      );
+      console.log('LOCKED:', queueData.locked);
     }
 
     loadQueue();
@@ -163,6 +168,7 @@ export default function BarberWaitlistPage() {
           hasChanges={hasChanges}
           setHasChanges={setHasChanges}
           onConfirm={handleConfirmChanges}
+          locked={locked}
         />
 
       )}

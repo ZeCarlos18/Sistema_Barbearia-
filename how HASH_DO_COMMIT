@@ -1,0 +1,20 @@
+[33m6752acc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Criando tela de dashboard do barbeiro e tela de configuração de lembrete
+[33m909a15a[m feat: add reminder settings component and integrate with appointments view
+[33m921ac2c[m feat: adicionando visual para quando estiver em estado vazio a lista de espera
+[33m2680eaa[m feat: criando a funcionalidade de ordenar lista e botão de voltar
+[33m5a1a1e2[m feat: interface criada, falta conectar com o back
+[33m349a0a6[m feat: Criando a interface referente a gerenciar lista de espera
+[33m926845e[m Merge branch 'main' of https://github.com/ZeCarlos18/Sistema_Barbearia-
+[33m20fb7e5[m Salvando alterações
+[33m934d3a4[m feat(notification) criando a lógica de excluir notificação
+[33m181ae58[m feat: criando a interface de notificação da lista de espera
+[33ma391b7d[m fix(setup): add compatibility checks for waitlist schema migration
+[33m30ba327[m Adicionando funções de lista de espera, priorização da lista e Gerenciamento por parte do Barbeiro
+[33m981e68b[m feat: Criando o front relacionado a função entrar na lista de espera
+[33mfb70230[m Back-end das RFs 14 e 25
+[33mbfb268c[m Big changes in multiple files and folders
+[33m976bc66[m alter code to add some small corrections
+[33m44babe6[m removing redundanci in code
+[33md285dc0[m feat: Corrijindo rota do navbar
+[33mab2153f[m feat: Deixando a tela de dashboard-barbeiro totalmente funcional
+[33m2a02e5e[m Merge branch 'main' of https://github.com/ZeCarlos18/Sistema_Barbearia-

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLayout, FiLock, FiLogOut, FiPlus, FiUser, FiUserX } from 'react-icons/fi';
+import { FiBell, FiCalendar, FiChevronLeft, FiChevronRight, FiHome, FiLayout, FiLock, FiLogOut, FiPlus, FiUser, FiUserX, FiUsers } from 'react-icons/fi';
 import { fetchAppointmentsByDate } from '../../../services/dashboardService';
 import { createAppointment, fetchServices } from '../../../services/bookingService';
 import { createUnavailability, fetchBarberSchedule, fetchBarberUnavailabilities, updateAppointmentStatus } from '../../../services/availabilityService';
@@ -873,6 +873,29 @@ function isUnavailable(dateStr, timeStr = null) {
                       </div>
                       <span className="chief-settings-end">
                         <FiChevronRight className="chief-settings-chevron" size={16} />
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="chief-settings-item"
+                      onClick={() => navigate('/barber-waitlist')}
+                    >
+                      <div className="chief-settings-item-left">
+                        <span className="chief-settings-icon">
+                          <FiUsers size={14} />
+                        </span>
+
+                        <span className="chief-settings-label">
+                          Gerenciar Lista de Espera
+                        </span>
+                      </div>
+
+                      <span className="chief-settings-end">
+                        <FiChevronRight
+                          className="chief-settings-chevron"
+                          size={16}
+                        />
                       </span>
                     </button>
 
