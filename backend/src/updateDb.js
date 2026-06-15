@@ -28,6 +28,13 @@ async function updateDatabase() {
     console.log('⏳ Adicionando novas colunas à tabela users...');
 
     try {
+      await connection.query('ALTER TABLE users ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1;');
+      console.log('✅ Coluna "active" adicionada com sucesso.');
+    } catch (e) {
+      console.log('⚠️ Aviso: "active" (Provavelmente já existe) - Detalhe:', e.message);
+    }
+
+    try {
       await connection.query('ALTER TABLE users ADD COLUMN available_days VARCHAR(50) DEFAULT NULL;');
       console.log('✅ Coluna "available_days" adicionada com sucesso.');
     } catch (e) {

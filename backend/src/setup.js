@@ -50,7 +50,22 @@ async function setupDatabase() {
     `);
     console.log('✅ Tabela "users" criada/verificada');
 
-    //await connection.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS active TINYINT(1) NOT NULL DEFAULT 1');
+    // Verificar se a coluna active existe na tabela users
+    const [activeColumn] = await connection.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'users'
+        AND COLUMN_NAME = 'active'
+    `, [process.env.DB_NAME || 'barbearia_db']);
+
+    if (!activeColumn || activeColumn.length === 0) {
+      await connection.query(`
+        ALTER TABLE users
+        ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1
+      `);
+      console.log('✅ Coluna "active" adicionada à tabela "users"');
+    }
 
     // Criar tabela de serviços
     await connection.query(`

@@ -6,7 +6,6 @@
  * @param {string} timeString - Hora no formato HH:mm ou HH:mm:ss
  * @returns {boolean} - Retorna true se o momento já ficou no passado
  */
-// src/utils/dateHelper.js
 
 export const isPastAppointment = (dateString, timeString) => {
     if (!dateString) return false;
