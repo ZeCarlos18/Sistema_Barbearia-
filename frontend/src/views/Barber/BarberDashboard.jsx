@@ -1,23 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import BarberHeader from '../../../components/BarberHeader/BarberHeader';
-import StatsCard from '../../../components/StatsCard/StatsCard';
-import ScheduleList from '../../../components/ScheduleList/ScheduleList';
-import BottomNav from '../../../components/BottomNav/BottomNav';
-import { mockBarberData } from '../../../constants/mockData';
-import { useBarberData } from '../../../hooks/useBarberData';
-import './BarberDashboard.css';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import BarberHeader from '../../components/BarberHeader/BarberHeader';
+import StatsCard from '../../components/StatsCard/StatsCard';
+import ScheduleList from '../../components/ScheduleList/ScheduleList';
+import BottomNav from '../../components/BottomNav/BottomNav';
+import { mockBarberData } from '../../constants/mockData';
+import { useBarberData } from '../../hooks/useBarberData';
+import { isPastAppointment } from '../../utils/dateHelper';
+import '../../styles/Barber/BarberDashboard.css';
 
 /**
  * Página principal do dashboard do barbeiro
  * Responsável por coordenar todos os componentes e gerenciar os dados
- * 
- * @returns {JSX.Element} Dashboard completo do barbeiro
+ * * @returns {JSX.Element} Dashboard completo do barbeiro
  */
-function BarberDashboard() {
+export default function BarberDashboard({ onNavigate }) {
   const { barberData, todaySchedule, isLoading, error } = useBarberData();
   const safeBarberData = barberData || mockBarberData;
-  const navigate = useNavigate();
   const location = useLocation();
 
   // Estado para navegação inferior
@@ -29,43 +28,28 @@ function BarberDashboard() {
     setActiveNav(tab || 'home');
   }, [location.search]);
 
-  // Função para lidar com navegação
-  const handleNavigate = (item) => {
-    setActiveNav(item);
-
-    if (item === 'home') {
-      navigate('/barber-dashboard');
-      return;
-    }
-
-    if (item === 'dashboard') {
-      navigate('/dashboard-barbeiro');
-      return;
-    }
-
-    if (item === 'search') {
-      navigate('/barber-dashboard?tab=search');
-      return;
-    }
-
-    if (item === 'calendar') {
-      navigate('/barber-chief?section=availability');
-      return;
-    }
-
-    if (item === 'profile') {
-      navigate('/barber-chief?section=menu');
-      return;
-    }
-
-    navigate(`/barber-dashboard?tab=${item}`);
-  };
-
   // Função para lidar com clique em notificações
   const handleNotificationClick = () => {
     console.log('Notificação clicada');
     // Futura integração: mostrar notificações
   };
+
+  const upcomingSchedule = useMemo(() => {
+    if (!todaySchedule) return [];
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    return todaySchedule
+      .filter(apt => {
+        const aptDate = apt.date || todayStr;
+        return !isPastAppointment(aptDate, apt.time); 
+      })
+      .sort((a, b) => {
+        const timeA = a.time ? String(a.time).substring(0, 8) : '00:00:00';
+        const timeB = b.time ? String(b.time).substring(0, 8) : '00:00:00';
+        return timeA.localeCompare(timeB);
+      });
+  }, [todaySchedule]);
 
   if (error) {
     return <div className="error">{error}</div>;
@@ -92,7 +76,7 @@ function BarberDashboard() {
           variant="profit"
         />
         <StatsCard
-          value={safeBarberData.remainingAppointments}
+          value={upcomingSchedule.length} 
           label="Restantes"
           variant="remaining"
         />
@@ -100,19 +84,16 @@ function BarberDashboard() {
 
       {/* Lista de agendamentos */}
       <ScheduleList
-        schedule={todaySchedule}
+        schedule={upcomingSchedule} 
         isLoading={isLoading}
-        emptyMessage="Nenhum agendamento para hoje"
+        emptyMessage="Nenhum agendamento pendente para hoje" 
       />
 
       {/* Navegação inferior */}
       <BottomNav
         active={activeNav}
-        onNavigate={handleNavigate}
+        onNavigate={onNavigate}
       />
     </div>
   );
 }
-
-export default BarberDashboard;
-

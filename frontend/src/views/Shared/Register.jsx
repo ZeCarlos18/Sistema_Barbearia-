@@ -5,7 +5,7 @@ import PrimaryButton from '../../components/PrimaryButton';
 import TextField from '../../components/form/TextField';
 import { register } from '../../services/authService';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import './Register.css';
+import '../../styles/Shared/Register.css';
 
 const initialForm = {
   name: '',

@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getActiveNavItem } from "../../../utils/navHelper";
+import { getActiveNavItem } from "../../utils/navHelper";
 import { FiArrowLeft, FiPlus } from "react-icons/fi";
-import { createBarber } from "../../../services/adminService";
-import BottomNav from "../../../components/BottomNav/BottomNav";
-import "./BarberCreate.css";
+import { createBarber } from "../../services/adminService";
+import BottomNav from "../../components/BottomNav/BottomNav";
+import "../../styles/BarberChief/BarberCreate.css";
 
 const weekDays = Array.from({ length: 7 }).map((_, i) => ({
   id: i,
@@ -287,12 +287,12 @@ export default function BarberCreate({ onBack }) {
         </div>
       </div>
 
-      <BottomNav 
+      <BottomNav
         active={getActiveNavItem(location.pathname)}
         onNavigate={(page) => {
-          if (page === 'dashboard') navigate('/dashboard-barbeiro');
-          else if (page === 'home') navigate('/barber-dashboard');
-          else if (page === 'profile') navigate('/barber-chief?section=menu');
+          if (page === "dashboard") navigate("/dashboard-barbeiro");
+          else if (page === "home") navigate("/barber-dashboard");
+          else if (page === "profile") navigate("/barber-chief?section=menu");
         }}
       />
     </div>

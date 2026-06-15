@@ -4,7 +4,7 @@ import { getActiveNavItem } from '../../utils/navHelper';
 import TextField from '../../components/form/TextField';
 import { login } from '../../services/authService';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import './Login.css';
+import '../../styles/Shared/Login.css';
 
 export default function Login({ onLoginSuccess, onGoToRegister, onGoToRecover }) {
   const navigate = useNavigate();

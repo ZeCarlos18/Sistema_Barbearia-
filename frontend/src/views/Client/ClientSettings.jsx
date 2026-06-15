@@ -1,8 +1,8 @@
 import React from 'react';
 import { FiBell, FiChevronRight, FiClock, FiLock, FiLogOut, FiUser } from 'react-icons/fi';
-import BottomNav from '../../../components/BottomNav/BottomNav';
-import { fetchMyAppointments, getProfile, updateProfile } from '../../../services/userService';
-import './ClientSettings.css';
+import BottomNav from '../../components/BottomNav/BottomNav';
+import { fetchMyAppointments, getProfile, updateProfile } from '../../services/userService';
+import '../../styles/Client/ClientSettings.css';
 
 function getStoredUser() {
   const stored = localStorage.getItem('user') || sessionStorage.getItem('user');

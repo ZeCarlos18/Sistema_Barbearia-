@@ -1,28 +1,27 @@
 /**
  * AppointmentCard - Componente que exibe um agendamento individual
- * 
- * Props:
- *  - appointment: object (obrigatório) - Dados do agendamento
- *    {
- *      id: number,
- *      serviceName: string,
- *      barberName: string,
- *      date: string (YYYY-MM-DD),
- *      time: string (HH:MM),
- *      status: string (confirmado | cancelado | concluído)
- *    }
- *  - onDelete: function (opcional) - Callback ao clicar em deletar
- * 
- * Exemplo:
- *  <AppointmentCard 
- *    appointment={appointment}
- *    onDelete={(id) => handleDelete(id)}
- *  />
+ * * Props:
+ * - appointment: object (obrigatório) - Dados do agendamento
+ * {
+ * id: number,
+ * serviceName: string,
+ * barberName: string,
+ * date: string (YYYY-MM-DD),
+ * time: string (HH:MM),
+ * status: string (confirmado | cancelado | concluído)
+ * }
+ * - onDelete: function (opcional) - Callback ao clicar em deletar
+ * * Exemplo:
+ * <AppointmentCard 
+ * appointment={appointment}
+ * onDelete={(id) => handleDelete(id)}
+ * />
  */
 
 import React from 'react';
 import { FiTrash2 } from 'react-icons/fi';
 import StatusBadge from '../StatusBadge/StatusBadge';
+import { isPastAppointment } from '../../utils/dateHelper';
 import './AppointmentCard.css';
 
 export default function AppointmentCard({ appointment, onDelete }) {
@@ -42,7 +41,7 @@ export default function AppointmentCard({ appointment, onDelete }) {
     const [year, month, day] = dateStr.split('-');
     if (!year || !month || !day) return dateStr;
     
-    const date = new Date(year, parseInt(month) - 1, parseInt(day));
+    const dateObj = new Date(year, parseInt(month) - 1, parseInt(day));
     
     const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
     const months = [
@@ -50,9 +49,9 @@ export default function AppointmentCard({ appointment, onDelete }) {
       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
     ];
 
-    const weekday = weekdays[date.getDay()];
-    const dayNum = date.getDate();
-    const monthName = months[date.getMonth()];
+    const weekday = weekdays[dateObj.getDay()];
+    const dayNum = dateObj.getDate();
+    const monthName = months[dateObj.getMonth()];
 
     return `${weekday}, ${dayNum} de ${monthName}`;
   }
@@ -66,14 +65,17 @@ export default function AppointmentCard({ appointment, onDelete }) {
     return String(timeString).split(':').slice(0, 2).join(':');
   }
 
+
+  const canCancel = onDelete && status === 'confirmado' && !isPastAppointment(date, time);
+
   return (
     <article className="appointment-card">
       {/* Seção superior: Status e botão deletar */}
       <div className="appointment-card__header">
         <StatusBadge status={status} />
         
-        {/* Botão de deletar (opcional, apenas se callback fornecido) */}
-        {onDelete && (
+        {/* Botão de deletar blindado contra agendamentos passados */}
+        {canCancel && (
           <button
             className="appointment-card__delete"
             onClick={() => onDelete(id)}

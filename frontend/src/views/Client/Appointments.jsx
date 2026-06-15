@@ -1,27 +1,26 @@
 /**
  * Appointments - Página de agendamentos do cliente
- * 
- * Responsabilidades:
+ * * Responsabilidades:
  * - Gerenciar estado dos agendamentos
  * - Filtrar agendamentos (Todos, Próximos, Histórico)
- * - Ordenar agendamentos cronologicamente
+ * - Ordenar agendamentos cronologicamente (Data e Hora)
  * - Exibir cards de agendamento
  * - Permitir deleção de agendamentos
- * 
- * Props:
- *  - onNavigate: function - Callback para navegação
- *  - onLogout: function - Callback para logout
+ * * Props:
+ * - onNavigate: function - Callback para navegação
+ * - onLogout: function - Callback para logout
  */
 
 import React from 'react';
 import { FiBell } from 'react-icons/fi';
-import ReminderSettings from '../../../components/ReminderSettings/ReminderSettings';
-import FilterTabs from '../../../components/FilterTabs/FilterTabs';
-import AppointmentCard from '../../../components/AppointmentCard/AppointmentCard';
-import EmptyState from '../../../components/EmptyState/EmptyState';
-import BottomNav from '../../../components/BottomNav/BottomNav';
-import { getMyAppointments, cancelAppointment } from '../../../services/appointmentService';
-import './Appointments.css';
+import ReminderSettings from '../../components/ReminderSettings/ReminderSettings';
+import FilterTabs from '../../components/FilterTabs/FilterTabs';
+import AppointmentCard from '../../components/AppointmentCard/AppointmentCard';
+import EmptyState from '../../components/EmptyState/EmptyState';
+import BottomNav from '../../components/BottomNav/BottomNav';
+import { getMyAppointments, cancelAppointment } from '../../services/appointmentService';
+import '../../styles/Client/Appointments.css';
+import { isPastAppointment } from "../../utils/dateHelper";
 
 /**
  * Constantes de abas
@@ -109,40 +108,32 @@ export default function Appointments({ onNavigate, onLogout }) {
     return statusMap[apiStatus] || 'confirmado';
   }
 
-  /**
-   * Função para obter data de hoje no formato YYYY-MM-DD
-   */
-  function getTodayDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  /**
+/**
    * Filtrar agendamentos baseado na aba ativa
    * Usa useMemo para não recalcular a cada render
    */
   const filteredAppointments = React.useMemo(() => {
-    const today = getTodayDate();
+    // 🚀 Função auxiliar blindada para ordenação cronológica exata
+    const getDateTime = (date, time) => {
+      const cleanDate = String(date).trim().substring(0, 10);
+      const cleanTime = time ? String(time).trim().substring(0, 8) : '00:00:00';
+      const parsed = new Date(`${cleanDate}T${cleanTime}`);
+      return isNaN(parsed.getTime()) ? new Date(0) : parsed;
+    };
 
     switch (activeTab) {
       case 'Próximos':
-        // Agendamentos futuros e confirmados
         return appointments
-          .filter(apt => apt.date >= today && apt.status === 'confirmado')
-          .sort((a, b) => new Date(a.date) - new Date(b.date));
+          .filter(apt => !isPastAppointment(apt.date, apt.time) && apt.status === 'confirmado')
+          .sort((a, b) => getDateTime(a.date, a.time) - getDateTime(b.date, b.time)); 
 
       case 'Histórico':
-        // Agendamentos passados ou cancelados/concluídos
         return appointments
-          .filter(apt => apt.date < today || apt.status !== 'confirmado')
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
+          .filter(apt => isPastAppointment(apt.date, apt.time) || apt.status !== 'confirmado')
+          .sort((a, b) => getDateTime(b.date, b.time) - getDateTime(a.date, a.time)); 
 
-      default: // 'Todos'
-        // Todos os agendamentos, ordenados por data (decrescente)
-        return appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
+      default: 
+        return [...appointments].sort((a, b) => getDateTime(b.date, b.time) - getDateTime(a.date, a.time));
     }
   }, [activeTab, appointments]);
 

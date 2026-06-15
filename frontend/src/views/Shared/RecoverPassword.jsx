@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { getActiveNavItem } from '../../utils/navHelper';
 import TextField from '../../components/form/TextField';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import './RecoverPassword.css';
+import '../../styles/Shared/RecoverPassword.css';
 
 export default function RecoverPassword({ onBackToLogin }) {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import { FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/BarberWaitlist.css';
+import '../../styles/Barber/BarberWaitlist.css';
 
 export default function WaitlistHeader({
   selectedDate,

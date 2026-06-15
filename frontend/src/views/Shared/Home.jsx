@@ -1,5 +1,5 @@
 import React from 'react';
-import './Home.css';
+import '../../styles/Shared/Home.css';
 import banner from '../../assets/image.png';
 import BottomNav from '../../components/BottomNav/BottomNav';
 import { FiTrash2, FiBell } from 'react-icons/fi';
