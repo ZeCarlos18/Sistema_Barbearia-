@@ -17,6 +17,7 @@ import Booking from "./views/Client/Booking";
 import ClientSettings from "./views/Client/ClientSettings";
 import BarberDashboard from "./views/Barber/BarberDashboard"; 
 import BarberChief from "./views/BarberChief/BarberChief";
+import DashboardBarbeiro from "./views/BarberChief/DashboarChief";
 import BarberCreate from "./views/BarberChief/BarberCreate";
 import Appointments from "./views/Client/Appointments";
 import BarberWaitlistPage from "./views/Barber/BarberWaitlistPage";
@@ -107,7 +108,7 @@ function AppRoutes() {
     const basePath = user?.role === "admin" ? "/dashboard-chief" : "/barber-dashboard";
 
     const routes = {
-      dashboard: basePath,
+      dashboard: "/dashboard-barbeiro",
       home: basePath,
       search: `${basePath}?tab=search`,
       calendar: "/barber-chief?section=availability",
@@ -198,6 +199,15 @@ function AppRoutes() {
       />
       
       <Route
+        path="/dashboard-barbeiro"
+        element={
+          <ProtectedRoute allowedRoles={["barber", "admin"]}>
+            <DashboardBarbeiro />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
         path="/barber-dashboard"
         element={
           <ProtectedRoute allowedRoles={["barber", "admin"]}>
@@ -212,7 +222,7 @@ function AppRoutes() {
           <ProtectedRoute allowedRoles={["barber", "admin"]}>
             <BarberChief
               onOpenCreate={() => navigate("/barber-create")}
-              onOpenDashboard={() => navigate(getDefaultRoute(user?.role))}
+              onOpenDashboard={() => navigate("/dashboard-barbeiro")}
               onLogout={handleLogout}
             />
           </ProtectedRoute>

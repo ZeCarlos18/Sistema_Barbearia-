@@ -20,6 +20,27 @@
   gap: 12px;
 }
 
+/* Botão da logo/avatar */
+.barber-header__avatar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.barber-header__avatar-btn:hover {
+  transform: scale(1.05);
+}
+
+.barber-header__avatar-btn:active {
+  transform: scale(0.95);
+}
+
 /* Avatar */
 .barber-header__avatar {
   width: 50px;

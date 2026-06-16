@@ -10,6 +10,7 @@ import './BarberHeader.css';
  * @param {string} props.name - Nome do barbeiro (ex: "Lucas")
  * @param {string} props.avatar - URL da foto do barbeiro
  * @param {function} [props.onNotificationClick] - Callback ao clicar no sino
+ * @param {function} [props.onLogoClick] - Callback ao clicar na logo/avatar para ir ao dashboard
  * @returns {JSX.Element} Cabeçalho do dashboard
  * 
  * @example
@@ -17,18 +18,27 @@ import './BarberHeader.css';
  *   name="Lucas" 
  *   avatar="https://i.pravatar.cc/150?img=12"
  *   onNotificationClick={() => console.log('Notificação')}
+ *   onLogoClick={() => navigate('/dashboard-barbeiro')}
  * />
  */
-function BarberHeader({ name, avatar, onNotificationClick }) {
+function BarberHeader({ name, avatar, onNotificationClick, onLogoClick }) {
   return (
     <header className="barber-header">
       <div className="barber-header__content">
-        {/* Avatar do barbeiro */}
-        <img 
-          src={avatar} 
-          alt={name}
-          className="barber-header__avatar"
-        />
+        {/* Avatar do barbeiro - clicável para ir ao dashboard */}
+        <button
+          type="button"
+          className="barber-header__avatar-btn"
+          onClick={onLogoClick}
+          aria-label="Ir para Dashboard"
+          title="Ir para Dashboard"
+        >
+          <img 
+            src={avatar} 
+            alt={name}
+            className="barber-header__avatar"
+          />
+        </button>
 
         {/* Info de boas-vindas */}
         <div className="barber-header__info">
@@ -52,11 +62,13 @@ function BarberHeader({ name, avatar, onNotificationClick }) {
 BarberHeader.propTypes = {
   name: PropTypes.string.isRequired,
   avatar: PropTypes.string.isRequired,
-  onNotificationClick: PropTypes.func
+  onNotificationClick: PropTypes.func,
+  onLogoClick: PropTypes.func
 };
 
 BarberHeader.defaultProps = {
-  onNotificationClick: () => {}
+  onNotificationClick: () => {},
+  onLogoClick: () => {}
 };
 
 export default BarberHeader;

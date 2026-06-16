@@ -34,6 +34,11 @@ export default function BarberDashboard({ onNavigate }) {
     // Futura integração: mostrar notificações
   };
 
+  // Função para lidar com clique na logo/avatar (navegar para dashboard)
+  const handleLogoClick = () => {
+    onNavigate?.('dashboard');
+  };
+
   const upcomingSchedule = useMemo(() => {
     if (!todaySchedule) return [];
 
@@ -62,6 +67,7 @@ export default function BarberDashboard({ onNavigate }) {
         name={safeBarberData.name}
         avatar={safeBarberData.avatar}
         onNotificationClick={handleNotificationClick}
+        onLogoClick={handleLogoClick}
       />
 
       {/* Cards de resumo */}

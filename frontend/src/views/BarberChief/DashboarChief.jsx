@@ -7,13 +7,13 @@ import {
     FiScissors,
     FiX,
 } from "react-icons/fi";
-import BottomNav from "../../../components/BottomNav/BottomNav";
+import BottomNav from "../../components/BottomNav/BottomNav";
 import {
     deactivateBarber,
     fetchBarberDetails,
     fetchBarbers,
-} from "../../../services/adminService";
-import "./DashboardBarbeiro.css";
+} from "../../services/adminService";
+import "../../styles/BarberChief/DashboardChief.css";
 
 // fallback/demo data — not used if backend returns real data
 const fallbackBarbers = [

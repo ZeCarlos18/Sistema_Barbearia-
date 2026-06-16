@@ -24,7 +24,7 @@ export const getActiveNavItem = (pathname) => {
 export const getBarberRouteFromNavItem = (item) => {
   const routes = {
     home: '/barber-dashboard',
-    dashboard: '/barber-dashboard',
+    dashboard: '/dashboard-barbeiro',
     search: '/barber-dashboard?tab=search',
     calendar: '/barber-chief?section=availability',
     profile: '/barber-chief?section=menu'
