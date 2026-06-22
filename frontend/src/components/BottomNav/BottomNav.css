@@ -1,8 +1,9 @@
 .bottom-nav {
   position: fixed;
   bottom: 12px;
-  left: 12px;
-  right: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 24px));
   z-index: 100;
   display: flex;
   gap: 8px;
@@ -69,4 +70,18 @@
 /* ensure non-create items flex properly */
 .bottom-nav__item:not(.bottom-nav__item--create) {
   flex: 1;
+}
+
+@media (min-width: 768px) {
+  .bottom-nav {
+    max-width: 420px;
+  }
+
+  .bottom-nav__item {
+    min-height: 54px;
+  }
+
+  .bottom-nav__item span {
+    font-size: 0.8rem;
+  }
 }
