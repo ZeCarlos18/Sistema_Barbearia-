@@ -113,7 +113,7 @@ export default function Appointments({ onNavigate, onLogout }) {
    * Usa useMemo para não recalcular a cada render
    */
   const filteredAppointments = React.useMemo(() => {
-    // 🚀 Função auxiliar blindada para ordenação cronológica exata
+    // Função auxiliar blindada para ordenação cronológica exata
     const getDateTime = (date, time) => {
       const cleanDate = String(date).trim().substring(0, 10);
       const cleanTime = time ? String(time).trim().substring(0, 8) : '00:00:00';
