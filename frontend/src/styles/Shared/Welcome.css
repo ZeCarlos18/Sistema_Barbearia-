@@ -6,24 +6,30 @@
   min-height:100dvh;
   padding: 8px;
   background:#111;
-  box-sizing:border-box;
+  overflow-x: hidden;
 }
 
-.hero-card{
-  width:100%;
-  max-width:500px;
-  height:640px;
-  border-radius:20px;
-  background-size:cover;
-  background-position:center center;
-  position:relative;
-  overflow:hidden;
+.hero-card {
+  width: 100%;
+  max-width: 420px;
+  height: min(85vh, 760px);
+  border-radius: 20px;
+  background-size: cover;
+  background-position: center center;
+  position: relative;
+  overflow: hidden;
 }
 
-.hero-overlay{
-  position:absolute;
-  left:0;right:0;bottom:0;height:40%;
-  background:linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.95) 100%);
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.35) 45%,
+    rgba(0, 0, 0, 0) 60%
+  );
+  z-index: 1;
 }
 
 .hero-content {
@@ -31,12 +37,12 @@
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 2;
   color: #fff;
   text-align: center;
   padding: 22px 16px 20px;
-  background: rgba(0, 0, 0, 0.55);
-  border-top: 1px solid #d4af37;
-  border-radius: 18px 18px 0 0;
+  background: transparent;
+  border-top: 1px solid rgba(212, 175, 55, 0.5);
 }
 
 .hero-title{
@@ -61,12 +67,11 @@
     padding: 8px;
   }
 
-  .hero-card{
-    width:100%;
-    max-width:500px;
-    height:540px;
-    border-radius:20px;
-    background-position:center top;
+  .hero-card {
+    max-width: 100%;
+    height: 540px;
+    aspect-ratio: auto;
+    background-position: center top;
   }
 
   .hero-content{
@@ -86,4 +91,5 @@
   .hero-actions{
     gap:10px;
   }
+
 }

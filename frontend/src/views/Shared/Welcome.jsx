@@ -4,7 +4,7 @@ import { getActiveNavItem } from "../../utils/navHelper";
 import PrimaryButton from "../../components/PrimaryButton";
 import BottomNav from "../../components/BottomNav/BottomNav";
 import "../../styles/Shared/Welcome.css";
-import hero from "../../assets/image.png";
+import hero from "../../assets/foto-barber.png";
 
 export default function Welcome({ onCreateAccount, onLogin }) {
   const location = useLocation();
