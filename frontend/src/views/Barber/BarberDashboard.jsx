@@ -23,10 +23,22 @@ export default function BarberDashboard({ onNavigate }) {
   const [activeNav, setActiveNav] = useState('home');
 
   useEffect(() => {
+
     const searchParams = new URLSearchParams(location.search);
+
     const tab = searchParams.get('tab');
-    setActiveNav(tab || 'home');
-  }, [location.search]);
+    const section = searchParams.get('section');
+
+    if (section === 'availability')
+      setActiveNav('calendar');
+
+    else if (section === 'menu')
+      setActiveNav('profile');
+
+    else
+      setActiveNav(tab || 'home');
+
+  }, [location]);
 
   // Função para lidar com clique em notificações
   const handleNotificationClick = () => {

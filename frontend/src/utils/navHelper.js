@@ -5,12 +5,26 @@
  * @param {string} pathname - O pathname da rota atual
  * @returns {string} - O ID do botão que deve estar ativo
  */
-export const getActiveNavItem = (pathname) => {
+export const getActiveNavItem = (pathname, search = '') => {
+
+  if (pathname === '/barber-chief') {
+
+    const params = new URLSearchParams(search);
+    const section = params.get('section');
+
+    if (section === 'availability')
+      return 'calendar';
+
+    if (section === 'menu')
+      return 'profile';
+  }
+
   const navMap = {
     '/booking': 'search',
     '/appointments': 'calendar',
     '/profile': 'profile',
-    '/dashboard-barbeiro': 'dashboard'
+    '/dashboard-barbeiro': 'dashboard',
+    '/barber-dashboard': 'home'
   };
 
   return navMap[pathname] || 'home';
