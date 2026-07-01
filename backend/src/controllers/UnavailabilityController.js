@@ -8,6 +8,13 @@ class UnavailabilityController {
     try {
       const { barberId, startDate, endDate, startTime, endTime, reason, action } = req.body;
 
+      // autorização: apenas barbeiro dono da agenda ou admin
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (req.userRole !== 'admin' && req.userRole !== 'barber') return res.status(403).json({ success: false, message: 'Acesso negado' });
+      if (req.userRole === 'barber' && String(req.userId) !== String(barberId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode gerenciar sua própria disponibilidade' });
+      }
+
       if (!barberId || !startDate || !endDate || !action) {
         return res.status(400).json({
           success: false,
@@ -67,7 +74,7 @@ class UnavailabilityController {
           barberId,
           type: 'appointment_cancelled',
           title: 'Seu agendamento foi cancelado',
-          message: `Infelizmente, seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} foi cancelado. Entraremos em contato em breve para remarcação.`,
+          message: `Infelizmente, seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} foi cancelado. Status do agendamento: cancelado. Entraremos em contato em breve para remarcação.`,
           relatedAppointmentId: apt.id
         });
       } else if (action === 'suggest_reschedule') {
@@ -76,7 +83,7 @@ class UnavailabilityController {
           barberId,
           type: 'reschedule_suggestion',
           title: 'Sugestão de remarcação',
-          message: `Seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} precisa ser remarcado. Acesse o app para escolher uma nova data.`,
+          message: `Seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} precisa ser remarcado. Status do agendamento: confirmado (aguardando sua ação). Acesse o app para escolher uma nova data ou contacte o barbeiro.`,
           relatedAppointmentId: apt.id
         });
       } else if (action === 'maintenance_warning') {
@@ -85,7 +92,7 @@ class UnavailabilityController {
           barberId,
           type: 'maintenance_notice',
           title: 'Aviso importante',
-          message: `Seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} está mantido. O barbeiro em breve entrará em contato com você.`,
+          message: `Seu agendamento de ${apt.service_name} em ${dateStr} às ${timeStr} está mantido. Status do agendamento: confirmado. O barbeiro em breve entrará em contato com você.`,
           relatedAppointmentId: apt.id
         });
       }
@@ -105,6 +112,12 @@ class UnavailabilityController {
         });
       }
 
+      // autorização: apenas barbeiro dono da agenda ou admin
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (req.userRole !== 'admin' && req.userRole !== 'barber') return res.status(403).json({ success: false, message: 'Acesso negado' });
+      if (req.userRole === 'barber' && String(req.userId) !== String(unavailability.barber_id || unavailability.barberId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode alterar sua própria indisponibilidade' });
+      }
       const updated = await Unavailability.update(id, {
         startDate,
         endDate,
@@ -134,6 +147,13 @@ class UnavailabilityController {
         });
       }
 
+      // autorização: apenas barbeiro dono da agenda ou admin
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (req.userRole !== 'admin' && req.userRole !== 'barber') return res.status(403).json({ success: false, message: 'Acesso negado' });
+      if (req.userRole === 'barber' && String(req.userId) !== String(barberId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode visualizar sua própria indisponibilidade' });
+      }
+
       const unavailabilities = await Unavailability.findByBarberId(barberId);
 
       res.json({
@@ -154,6 +174,13 @@ class UnavailabilityController {
           success: false,
           message: 'barberId, startDate e endDate são obrigatórios'
         });
+      }
+
+      // autorização: apenas barbeiro dono ou admin
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (req.userRole !== 'admin' && req.userRole !== 'barber') return res.status(403).json({ success: false, message: 'Acesso negado' });
+      if (req.userRole === 'barber' && String(req.userId) !== String(barberId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode verificar conflitos da própria agenda' });
       }
 
       const conflicts = await Unavailability.findConflictingAppointments(

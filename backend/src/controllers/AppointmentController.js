@@ -237,6 +237,12 @@ class AppointmentController {
       let { date } = req.params;
 
       if (!barberId) return res.status(400).json({ success: false, message: 'ID do barbeiro é obrigatório' });
+      // Verifica autenticação/autorizações: apenas barbeiro dono da agenda ou admin
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (req.userRole !== 'admin' && req.userRole !== 'barber') return res.status(403).json({ success: false, message: 'Acesso negado' });
+      if (req.userRole === 'barber' && String(req.userId) !== String(barberId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode visualizar sua própria agenda' });
+      }
       if (!date) date = new Date().toISOString().split('T')[0];
 
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -244,6 +250,10 @@ class AppointmentController {
       }
 
       const appointments = await Appointment.findByBarberAndDate(barberId, date);
+      if (!appointments || appointments.length === 0) {
+        return res.json({ success: true, message: 'Nenhum agendamento para a data selecionada', data: { barberId, date, scheduledAppointments: 0, appointments: [] } });
+      }
+
       res.json({
         success: true,
         data: { barberId, date, scheduledAppointments: appointments.length, appointments }
@@ -260,6 +270,13 @@ class AppointmentController {
 
       if (!barberId || !startDate || !endDate) {
         return res.status(400).json({ success: false, message: 'Faltam parâmetros' });
+      }
+
+      // Verifica autenticação/autorizações: apenas barbeiro dono da agenda ou admin
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (req.userRole !== 'admin' && req.userRole !== 'barber') return res.status(403).json({ success: false, message: 'Acesso negado' });
+      if (req.userRole === 'barber' && String(req.userId) !== String(barberId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode visualizar sua própria agenda' });
       }
 
       if (new Date(startDate) > new Date(endDate)) {

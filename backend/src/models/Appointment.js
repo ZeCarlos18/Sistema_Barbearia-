@@ -348,7 +348,7 @@ class Appointment {
         FROM appointments a
         LEFT JOIN users u ON a.user_id = u.id
         LEFT JOIN services s ON a.service_id = s.id
-        WHERE a.barber_id = ? AND a.date = ? AND a.status IN ('confirmed', 'completed')
+        WHERE a.barber_id = ? AND a.date = ? AND a.status = 'confirmed'
         ORDER BY a.time ASC
       `, [barberId, date]);
       return rows;
@@ -366,7 +366,7 @@ class Appointment {
         FROM appointments a
         LEFT JOIN users u ON a.user_id = u.id
         LEFT JOIN services s ON a.service_id = s.id
-        WHERE a.barber_id = ? AND a.date BETWEEN ? AND ? AND a.status IN ('confirmed', 'completed')
+        WHERE a.barber_id = ? AND a.date BETWEEN ? AND ? AND a.status = 'confirmed'
         ORDER BY a.date ASC, a.time ASC
       `, [barberId, startDate, endDate]);
       return rows;

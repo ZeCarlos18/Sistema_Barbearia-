@@ -133,13 +133,18 @@ class Unavailability {
     const connection = await pool.getConnection();
     
     try {
-      const [rows] = await connection.query(
-        `SELECT * FROM unavailabilities 
-         WHERE barber_id = ? AND start_date <= ? AND end_date >= ?
-         AND ((start_time IS NULL AND end_time IS NULL) 
-           OR (start_time IS NOT NULL AND end_time IS NOT NULL AND TIME(?) BETWEEN TIME(start_time) AND TIME(end_time)))`,
-        [barberId, date, date, time]
-      );
+      let query = `SELECT * FROM unavailabilities WHERE barber_id = ? AND start_date <= ? AND end_date >= ?`;
+      const params = [barberId, date, date];
+
+      if (time !== undefined && time !== null) {
+        query += ` AND ((start_time IS NULL AND end_time IS NULL) OR (start_time IS NOT NULL AND end_time IS NOT NULL AND TIME(?) BETWEEN TIME(start_time) AND TIME(end_time)))`;
+        params.push(time);
+      } else {
+        // when time not provided, return all unavailabilities for the day (full-day and time-ranged)
+        // no extra params needed
+      }
+
+      const [rows] = await connection.query(query, params);
       return rows;
     } finally {
       connection.release();
