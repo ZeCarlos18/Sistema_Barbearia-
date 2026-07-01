@@ -14,6 +14,7 @@ router.get('/schedule/:barberId/date/:date', authenticate, AppointmentController
 router.get('/schedule/:barberId/range', authenticate, AppointmentController.getBarberScheduleByDateRange);
 router.get('/:id', AppointmentController.findById);
 router.put('/:id/status', AppointmentController.updateStatus);
+router.post('/:id/confirm', AppointmentController.confirm);
 router.put('/:id/cancel', AppointmentController.cancel);
 router.delete('/:id', AppointmentController.delete);
 

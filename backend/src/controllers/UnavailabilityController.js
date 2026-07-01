@@ -39,7 +39,7 @@ class UnavailabilityController {
       );
 
       if (conflictingAppointments.length > 0) {
-        await this.handleConflictingAppointments(barberId, conflictingAppointments, action);
+        await UnavailabilityController.handleConflictingAppointments(barberId, conflictingAppointments, action);
       }
 
       const unavailability = await Unavailability.create({

@@ -7,14 +7,21 @@ class Appointment {
    * @returns {Object} Dados do agendamento criado
    */
   static async create(appointmentData) {
-    const { userId, barberId, serviceId, date, time } = appointmentData;
+    const { userId, barberId, serviceId, date, time, price: providedPrice } = appointmentData;
     
     const connection = await pool.getConnection();
     
     try {
+      // Determine price: use providedPrice or fetch from service
+      let price = providedPrice;
+      if (price === undefined || price === null) {
+        const [svcRows] = await connection.query('SELECT price FROM services WHERE id = ?', [serviceId]);
+        price = svcRows && svcRows[0] ? svcRows[0].price : 0.00;
+      }
+
       const [result] = await connection.query(
-        'INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
-        [userId, barberId, serviceId, date, time]
+        'INSERT INTO appointments (user_id, barber_id, service_id, price, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
+        [userId, barberId, serviceId, price, date, time]
       );
       
       return {

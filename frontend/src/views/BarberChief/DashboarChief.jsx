@@ -15,47 +15,7 @@ import {
 } from "../../services/adminService";
 import "../../styles/BarberChief/DashboardChief.css";
 
-// fallback/demo data — not used if backend returns real data
-const fallbackBarbers = [
-    {
-        id: 1,
-        name: "Rafael",
-        avatar: "https://i.pravatar.cc/120?img=12",
-        active: true,
-    },
-    {
-        id: 2,
-        name: "Felipe",
-        avatar: "https://i.pravatar.cc/120?img=13",
-        active: true,
-    },
-    {
-        id: 3,
-        name: "João",
-        avatar: "https://i.pravatar.cc/120?img=14",
-        active: true,
-    },
-];
-
-const fallbackDetails = {
-    2: {
-        barber: {
-            id: 2,
-            name: "Felipe",
-            active: true,
-            avatar: "https://i.pravatar.cc/120?img=13",
-        },
-        metrics: { appointments: 0, revenue: 0, completed: 0 },
-        chartTitle: "Cortes Realizados",
-        chartData: [
-            { label: "JAN", value: 0 },
-            { label: "FEV", value: 0 },
-            { label: "MAR", value: 0 },
-            { label: "ABR", value: 0 },
-        ],
-        schedule: [],
-    },
-};
+// No hardcoded fallbacks — show loaders or empty states when API has no data
 
 function getStoredUser() {
     const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
@@ -83,7 +43,13 @@ function formatCurrency(value) {
 }
 
 function getDisplayDetails(selectedBarberId) {
-    return fallbackDetails[selectedBarberId] || fallbackDetails[2];
+    return {
+        barber: { id: selectedBarberId, name: '', active: true, avatar: '' },
+        metrics: { appointments: 0, revenue: 0, completed: 0 },
+        chartTitle: 'Cortes Realizados',
+        chartData: [],
+        schedule: []
+    };
 }
 
 export default function DashboardBarbeiro() {
@@ -122,12 +88,8 @@ export default function DashboardBarbeiro() {
                     Array.isArray(list) && list.length > 0
                         ? list.map((barber, index) => ({
                             id: barber.id || index + 1,
-                            name:
-                                barber.name ||
-                                fallbackBarbers[index % fallbackBarbers.length].name,
-                            avatar:
-                                barber.avatar ||
-                                fallbackBarbers[index % fallbackBarbers.length].avatar,
+                            name: barber.name || `Barbeiro ${index + 1}`,
+                            avatar: barber.avatar || '',
                             active: barber.active !== false,
                         }))
                         : [];
@@ -217,8 +179,7 @@ export default function DashboardBarbeiro() {
                                 detailsBarber.avatar ||
                                 barbers.find(
                                     (barber) => Number(barber.id) === Number(selectedBarberId),
-                                )?.avatar ||
-                                fallbackBarbers[0].avatar,
+                                )?.avatar || '',
                         },
                         metrics: {
                             appointments:
@@ -265,7 +226,7 @@ export default function DashboardBarbeiro() {
         selectedBarberDetails?.barber ||
         (selectedBarberId
             ? getDisplayDetails(selectedBarberId).barber
-            : { id: null, name: "", avatar: fallbackBarbers[0].avatar });
+            : { id: null, name: "", avatar: '' });
     const selectedMetrics = selectedBarberDetails?.metrics || {
         appointments: 0,
         revenue: 0,

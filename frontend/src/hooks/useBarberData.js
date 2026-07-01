@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { mockBarberData, mockTodaySchedule } from '../constants/mockData';
 import { getBarberDashboard } from '../services/barberService';
 
 function getStoredUser() {
@@ -58,8 +57,8 @@ function normalizeDashboardData(payload) {
   return {
     barberData: {
       id: barber.id ?? null,
-      name: barber.name || mockBarberData.name,
-      avatar: barber.avatar || mockBarberData.avatar,
+      name: barber.name || '',
+      avatar: barber.avatar || '',
       totalAppointmentsToday: statistics.totalAppointmentsToday ?? todayAppointments.length,
       dailyProfit: statistics.dailyProfit ?? dailyProfitFromAppointments,
       remainingAppointments: statistics.remainingAppointments ?? todayAppointments.length
@@ -96,8 +95,9 @@ export function useBarberData() {
       const barberId = storedUser?.id;
 
       if (!barberId) {
-        setBarberData(mockBarberData);
-        setTodaySchedule(mockTodaySchedule);
+        setBarberData(null);
+        setTodaySchedule([]);
+        setIsLoading(false);
         return;
       }
 
@@ -107,9 +107,9 @@ export function useBarberData() {
       setBarberData(normalizedDashboard.barberData);
       setTodaySchedule(normalizedDashboard.todaySchedule);
     } catch (err) {
-      console.warn('Usando dados mockados do dashboard do barbeiro:', err);
-      setBarberData(mockBarberData);
-      setTodaySchedule(mockTodaySchedule);
+      console.warn('Erro ao carregar dashboard do barbeiro:', err);
+      setBarberData(null);
+      setTodaySchedule([]);
     } finally {
       setIsLoading(false);
     }

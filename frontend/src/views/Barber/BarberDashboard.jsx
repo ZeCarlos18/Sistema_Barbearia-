@@ -4,7 +4,7 @@ import BarberHeader from '../../components/BarberHeader/BarberHeader';
 import StatsCard from '../../components/StatsCard/StatsCard';
 import ScheduleList from '../../components/ScheduleList/ScheduleList';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import { mockBarberData } from '../../constants/mockData';
+// no local mock defaults — rely on API
 import { useBarberData } from '../../hooks/useBarberData';
 import { isPastAppointment } from '../../utils/dateHelper';
 import '../../styles/Barber/BarberDashboard.css';
@@ -16,7 +16,7 @@ import '../../styles/Barber/BarberDashboard.css';
  */
 export default function BarberDashboard({ onNavigate }) {
   const { barberData, todaySchedule, isLoading, error } = useBarberData();
-  const safeBarberData = barberData || mockBarberData;
+  const safeBarberData = barberData || { name: '—', avatar: '', totalAppointmentsToday: 0, dailyProfit: 0, remainingAppointments: 0 };
   const location = useLocation();
 
   // Estado para navegação inferior

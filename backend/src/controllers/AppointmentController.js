@@ -164,6 +164,17 @@ class AppointmentController {
     }
   }
 
+  static async confirm(req, res) {
+    try {
+      const { id } = req.params;
+      const appointment = await Appointment.updateStatus(id, 'confirmed');
+      if (!appointment) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
+      res.json({ success: true, data: appointment });
+    } catch (error) {
+      handleError(res, error, 'Erro ao confirmar agendamento');
+    }
+  }
+
   static async cancel(req, res) {
     try {
       const { id } = req.params;
