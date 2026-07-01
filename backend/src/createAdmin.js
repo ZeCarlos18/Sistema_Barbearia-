@@ -20,8 +20,8 @@ async function ensureAdmin() {
     process.exit(1);
   }
 
-  if (!process.env.DB_PASSWORD) {
-    console.error('Missing DB_PASSWORD in environment variables');
+  if (process.env.DB_PASSWORD === undefined) {
+    console.error('Missing DB_PASSWORD in environment variables (use DB_PASSWORD= for no password)');
     process.exit(1);
   }
 

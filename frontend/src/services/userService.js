@@ -12,8 +12,3 @@ export async function updateProfile(data) {
   });
   return payload.user;
 }
-
-export async function fetchMyAppointments() {
-  const payload = await apiFetch('/api/appointments/my');
-  return payload.data || [];
-}

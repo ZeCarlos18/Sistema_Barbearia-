@@ -111,7 +111,7 @@ function AppRoutes() {
       dashboard: "/dashboard-barbeiro",
       home: basePath,
       search: `${basePath}?tab=search`,
-      calendar: "/barber-chief?section=availability",
+      calendar: "/barber-chief?section=agenda",
       profile: "/barber-chief?section=menu",
       waitlist: "/barber-waitlist",
     };

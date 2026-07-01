@@ -1,25 +1,16 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { FiHome, FiLayout, FiPlus, FiCalendar, FiUser } from 'react-icons/fi';
+import { getStoredUser } from '../../utils/authHelper';
 import './BottomNav.css';
 
 export default function BottomNav({ active = 'home', onNavigate }) {
   const location = useLocation();
 
-  // Do not show BottomNav on auth/landing pages
   const hiddenPaths = ['/', '/login', '/register', '/recover'];
   if (hiddenPaths.includes(location.pathname)) return null;
-  // Determine user role (from localStorage or sessionStorage) to conditionally show items
-  let role = null;
-  try {
-    const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      role = parsed?.role || null;
-    }
-  } catch (e) {
-    role = null;
-  }
+
+  const role = getStoredUser()?.role || null;
 
   const baseItems = [
     { id: 'home', label: 'Home', Icon: FiHome },
@@ -29,8 +20,6 @@ export default function BottomNav({ active = 'home', onNavigate }) {
     { id: 'profile', label: 'Perfil', Icon: FiUser }
   ];
 
-  // Hide dashboard button for clients
-  // hide dashboard and create for clients
   const items = role === 'client' ? baseItems.filter((it) => it.id !== 'dashboard' && it.id !== 'create') : baseItems;
 
   return (

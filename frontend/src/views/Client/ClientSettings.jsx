@@ -1,21 +1,10 @@
 import React from 'react';
 import { FiBell, FiChevronRight, FiClock, FiLock, FiLogOut, FiUser } from 'react-icons/fi';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import { fetchMyAppointments, getProfile, updateProfile } from '../../services/userService';
+import { getProfile, updateProfile } from '../../services/userService';
+import { getMyAppointments } from '../../services/appointmentService';
+import { getStoredUser } from '../../utils/authHelper';
 import '../../styles/Client/ClientSettings.css';
-
-function getStoredUser() {
-  const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
-  if (!stored) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(stored);
-  } catch (error) {
-    return {};
-  }
-}
 
 export default function ClientSettings({ onNavigate, onLogout }) {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
@@ -90,7 +79,7 @@ export default function ClientSettings({ onNavigate, onLogout }) {
     setHistoryOpen(true);
     setHistoryStatus({ loading: true, error: '' });
     try {
-      const data = await fetchMyAppointments();
+      const data = await getMyAppointments();
       setHistory(data);
     } catch (error) {
       setHistoryStatus({ loading: false, error: error.message || 'Erro ao carregar historico.' });

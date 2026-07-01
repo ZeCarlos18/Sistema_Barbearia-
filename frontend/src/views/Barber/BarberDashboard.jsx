@@ -4,49 +4,29 @@ import BarberHeader from '../../components/BarberHeader/BarberHeader';
 import StatsCard from '../../components/StatsCard/StatsCard';
 import ScheduleList from '../../components/ScheduleList/ScheduleList';
 import BottomNav from '../../components/BottomNav/BottomNav';
-// no local mock defaults — rely on API
 import { useBarberData } from '../../hooks/useBarberData';
 import { isPastAppointment } from '../../utils/dateHelper';
 import '../../styles/Barber/BarberDashboard.css';
 
-/**
- * Página principal do dashboard do barbeiro
- * Responsável por coordenar todos os componentes e gerenciar os dados
- * * @returns {JSX.Element} Dashboard completo do barbeiro
- */
 export default function BarberDashboard({ onNavigate }) {
   const { barberData, todaySchedule, isLoading, error } = useBarberData();
   const safeBarberData = barberData || { name: '—', avatar: '', totalAppointmentsToday: 0, dailyProfit: 0, remainingAppointments: 0 };
   const location = useLocation();
-
-  // Estado para navegação inferior
   const [activeNav, setActiveNav] = useState('home');
 
   useEffect(() => {
-
     const searchParams = new URLSearchParams(location.search);
-
     const tab = searchParams.get('tab');
     const section = searchParams.get('section');
 
-    if (section === 'availability')
+    if (section === 'availability' || section === 'agenda')
       setActiveNav('calendar');
-
     else if (section === 'menu')
       setActiveNav('profile');
-
     else
       setActiveNav(tab || 'home');
-
   }, [location]);
 
-  // Função para lidar com clique em notificações
-  const handleNotificationClick = () => {
-    console.log('Notificação clicada');
-    // Futura integração: mostrar notificações
-  };
-
-  // Função para lidar com clique na logo/avatar (navegar para dashboard)
   const handleLogoClick = () => {
     onNavigate?.('dashboard');
   };
@@ -74,15 +54,12 @@ export default function BarberDashboard({ onNavigate }) {
 
   return (
     <div className="barber-dashboard">
-      {/* Cabeçalho */}
       <BarberHeader
         name={safeBarberData.name}
         avatar={safeBarberData.avatar}
-        onNotificationClick={handleNotificationClick}
         onLogoClick={handleLogoClick}
       />
 
-      {/* Cards de resumo */}
       <section className="stats-section">
         <StatsCard
           value={safeBarberData.totalAppointmentsToday}
@@ -100,14 +77,12 @@ export default function BarberDashboard({ onNavigate }) {
         />
       </section>
 
-      {/* Lista de agendamentos */}
       <ScheduleList
         schedule={upcomingSchedule} 
         isLoading={isLoading}
         emptyMessage="Nenhum agendamento pendente para hoje" 
       />
 
-      {/* Navegação inferior */}
       <BottomNav
         active={activeNav}
         onNavigate={onNavigate}

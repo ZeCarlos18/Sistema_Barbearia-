@@ -25,20 +25,8 @@ import {
   fetchBarberUnavailabilities,
   updateAppointmentStatus,
 } from "../../services/availabilityService";
+import { getStoredUser } from "../../utils/authHelper";
 import "../../styles/BarberChief/BarberChief.css";
-
-function getStoredUser() {
-  const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
-  if (!stored) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(stored);
-  } catch (error) {
-    return {};
-  }
-}
 
 const normalizeDateValue = (value) => {
   if (!value) return "";
@@ -95,8 +83,8 @@ export default function BarberChief({
   const location = useLocation();
   const navigate = useNavigate();
   const user = getStoredUser();
-  const displayName = user.name || "Lucas";
-  const barberId = user.id || user.userId || user.barberId || user._id;
+  const displayName = user?.name || "Lucas";
+  const barberId = user?.id || user?.userId || user?.barberId || user?._id;
   const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 
   const getInitialSection = React.useCallback(() => {
@@ -1456,21 +1444,21 @@ export default function BarberChief({
 
               <button
                 type="button"
+                className={`chief-nav-btn chief-nav-btn--plus ${activeNav === "create" ? "is-active" : ""}`}
+                onClick={() => handleNavClick("create")}
+                aria-label="Cadastrar barbeiro"
+              >
+                <FiPlus size={22} />
+              </button>
+
+              <button
+                type="button"
                 className={`chief-nav-btn chief-nav-btn--agenda ${activeNav === "agenda" ? "is-active" : ""}`}
                 onClick={() => handleNavClick("agenda")}
                 aria-label="Agenda"
               >
                 <FiCalendar size={18} />
                 <span>Agenda</span>
-              </button>
-
-              <button
-                type="button"
-                className={`chief-nav-btn chief-nav-btn--plus ${activeNav === "create" ? "is-active" : ""}`}
-                onClick={() => handleNavClick("create")}
-                aria-label="Cadastrar barbeiro"
-              >
-                <FiPlus size={22} />
               </button>
 
               <button

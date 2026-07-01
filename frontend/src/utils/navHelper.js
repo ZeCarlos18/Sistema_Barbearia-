@@ -12,7 +12,7 @@ export const getActiveNavItem = (pathname, search = '') => {
     const params = new URLSearchParams(search);
     const section = params.get('section');
 
-    if (section === 'availability')
+    if (section === 'availability' || section === 'agenda')
       return 'calendar';
 
     if (section === 'menu')
@@ -40,7 +40,7 @@ export const getBarberRouteFromNavItem = (item) => {
     home: '/barber-dashboard',
     dashboard: '/dashboard-barbeiro',
     search: '/barber-dashboard?tab=search',
-    calendar: '/barber-chief?section=availability',
+    calendar: '/barber-chief?section=agenda',
     profile: '/barber-chief?section=menu'
   };
 

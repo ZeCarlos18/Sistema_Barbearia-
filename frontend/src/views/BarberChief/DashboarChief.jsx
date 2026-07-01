@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
     FiBell,
     FiChevronDown,
+    FiChevronLeft,
+    FiChevronRight,
     FiCheck,
     FiScissors,
     FiX,
@@ -13,20 +15,9 @@ import {
     fetchBarberDetails,
     fetchBarbers,
 } from "../../services/adminService";
+import { fetchBarberSchedule } from "../../services/availabilityService";
+import { getStoredUser } from "../../utils/authHelper";
 import "../../styles/BarberChief/DashboardChief.css";
-
-// No hardcoded fallbacks — show loaders or empty states when API has no data
-
-function getStoredUser() {
-    const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
-    if (!stored) return {};
-
-    try {
-        return JSON.parse(stored);
-    } catch (error) {
-        return {};
-    }
-}
 
 function getInitials(name = "") {
     return String(name)
@@ -52,12 +43,45 @@ function getDisplayDetails(selectedBarberId) {
     };
 }
 
+function formatDateValue(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getTodayStr() {
+    return formatDateValue(new Date());
+}
+
+function getWeekDates(dateStr) {
+    const base = new Date(dateStr);
+    base.setHours(0, 0, 0, 0);
+    const start = new Date(base);
+    start.setDate(base.getDate() - base.getDay());
+    return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        return d;
+    });
+}
+
+function formatAgendaMonthLabel(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+        .replace(' de ', ' ')
+        .replace(/^./, c => c.toUpperCase());
+}
+
+function formatAgendaSummary(dateStr, count) {
+    const date = new Date(dateStr);
+    const weekdays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
+    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    return `${weekdays[date.getDay()]} ${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]} - ${count} HORÁRIO${count !== 1 ? 'S' : ''}`;
+}
+
 export default function DashboardBarbeiro() {
     const navigate = useNavigate();
     const location = useLocation();
     const user = getStoredUser();
-    const displayName = user.name || "Barbeiro Chefe";
-    const agendaRef = React.useRef(null);
+    const displayName = user?.name || "Barbeiro Chefe";
 
     const [activeNav, setActiveNav] = React.useState("dashboard");
 
@@ -67,7 +91,7 @@ export default function DashboardBarbeiro() {
         React.useState(null);
     const [showDeactivateModal, setShowDeactivateModal] = React.useState(false);
     const [showScheduleSection, setShowScheduleSection] = React.useState(false);
-    const [chartMode, setChartMode] = React.useState("cuts"); // 'cuts' or 'revenue'
+    const [chartMode, setChartMode] = React.useState("cuts");
     const [actionState, setActionState] = React.useState({
         loading: false,
         error: "",
@@ -76,6 +100,11 @@ export default function DashboardBarbeiro() {
     const [loadingBarbers, setLoadingBarbers] = React.useState(true);
     const [loadingDetails, setLoadingDetails] = React.useState(false);
     const [loadError, setLoadError] = React.useState("");
+
+    const [agendaDate, setAgendaDate] = React.useState(getTodayStr);
+    const [agendaAppointments, setAgendaAppointments] = React.useState([]);
+    const [agendaLoading, setAgendaLoading] = React.useState(false);
+    const [agendaError, setAgendaError] = React.useState("");
 
     React.useEffect(() => {
         let isMounted = true;
@@ -130,7 +159,7 @@ export default function DashboardBarbeiro() {
         else if (pathname === "/barber-dashboard") setActiveNav("home");
         else if (pathname === "/barber-dashboard" && tab === "search")
             setActiveNav("search");
-        else if (pathname === "/barber-chief" && section === "availability")
+        else if (pathname === "/barber-chief" && (section === "availability" || section === "agenda"))
             setActiveNav("calendar");
         else if (pathname === "/barber-chief" && section === "menu")
             setActiveNav("profile");
@@ -245,11 +274,46 @@ export default function DashboardBarbeiro() {
     const selectedChartData =
         chartMode === "revenue" ? chartDataRevenue : chartDataCuts;
 
+    React.useEffect(() => {
+        if (!showScheduleSection || !selectedBarberId) return;
+        let isMounted = true;
+
+        async function loadAgenda() {
+            setAgendaLoading(true);
+            setAgendaError("");
+            try {
+                const data = await fetchBarberSchedule(selectedBarberId, agendaDate);
+                if (!isMounted) return;
+                setAgendaAppointments(Array.isArray(data) ? data : []);
+            } catch (err) {
+                if (!isMounted) return;
+                setAgendaError(err.message || "Erro ao carregar agenda.");
+                setAgendaAppointments([]);
+            } finally {
+                if (isMounted) setAgendaLoading(false);
+            }
+        }
+
+        loadAgenda();
+        return () => { isMounted = false; };
+    }, [showScheduleSection, selectedBarberId, agendaDate]);
+
     function handleSelectBarber(barber) {
         setSelectedBarberId(Number(barber.id));
         setSelectedBarberDetails(getDisplayDetails(Number(barber.id)));
-        // hide schedule section when selecting another barber
         setShowScheduleSection(false);
+        setAgendaDate(getTodayStr());
+        setAgendaAppointments([]);
+    }
+
+    function handleAgendaDaySelect(date) {
+        setAgendaDate(formatDateValue(date));
+    }
+
+    function handleAgendaWeekShift(offset) {
+        const base = new Date(agendaDate);
+        base.setDate(base.getDate() + offset * 7);
+        setAgendaDate(formatDateValue(base));
     }
 
     // Navbar (BottomNav)
@@ -274,7 +338,7 @@ export default function DashboardBarbeiro() {
 
         if (item === "calendar") {
             setActiveNav("calendar");
-            navigate("/barber-chief?section=availability");
+            navigate("/barber-chief?section=agenda");
             return;
         }
 
@@ -346,7 +410,7 @@ export default function DashboardBarbeiro() {
                     </button>
                 </header>
 
-                <main className="dashboard-mobile-content" ref={agendaRef}>
+                <main className="dashboard-mobile-content">
                     <section className="dashboard-mobile-section">
                         <h2>Lista de Barbeiros</h2>
 
@@ -417,16 +481,7 @@ export default function DashboardBarbeiro() {
                         <button
                             type="button"
                             className="dashboard-mobile-button dashboard-mobile-button--primary"
-                            onClick={() => {
-                                setShowScheduleSection(true);
-                                // scroll to schedule section
-                                setTimeout(() => {
-                                    agendaRef.current?.scrollIntoView({
-                                        behavior: "smooth",
-                                        block: "start",
-                                    });
-                                }, 80);
-                            }}
+                            onClick={() => setShowScheduleSection(true)}
                         >
                             VER AGENDA
                         </button>
@@ -439,89 +494,146 @@ export default function DashboardBarbeiro() {
                         </button>
                     </section>
 
-                    <section className="dashboard-mobile-filter">
-                        <div
-                            className="dashboard-mobile-chip"
-                            role="tablist"
-                            aria-label="Selecionar métrica do gráfico"
-                        >
-                            <button
-                                type="button"
-                                className={`dashboard-mobile-chip-btn ${chartMode === "cuts" ? "is-active" : ""}`}
-                                onClick={() => setChartMode("cuts")}
+                    {!showScheduleSection && (
+                        <section className="dashboard-mobile-filter">
+                            <div
+                                className="dashboard-mobile-chip"
+                                role="tablist"
+                                aria-label="Selecionar métrica do gráfico"
                             >
-                                <FiScissors size={12} />
-                                <span>Cortes Realizados</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`dashboard-mobile-chip-btn ${chartMode === "revenue" ? "is-active" : ""}`}
-                                onClick={() => setChartMode("revenue")}
-                            >
-                                <span>Faturamento</span>
-                            </button>
-                        </div>
-                    </section>
-
-                    <section className="dashboard-mobile-chart-card">
-                        <div className="dashboard-mobile-chart-bars">
-                            {selectedChartData.map((item) => (
-                                <div key={item.label} className="dashboard-mobile-chart-column">
-                                    <strong>{item.value}</strong>
-                                    <div className="dashboard-mobile-chart-track">
-                                        <span
-                                            className="dashboard-mobile-chart-bar"
-                                            style={{
-                                                height: `${Math.max((item.value / maxBarValue) * 100, 22)}%`,
-                                            }}
-                                        />
-                                    </div>
-                                    <span>{item.label}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    {showScheduleSection && (
-                        <section
-                            className="dashboard-mobile-schedule"
-                            aria-label="Agenda do barbeiro"
-                        >
-                            <h3 className="dashboard-mobile-schedule-title">
-                                Agenda de {selectedBarber.name}
-                            </h3>
-                            {Array.isArray(selectedBarberDetails.schedule) &&
-                                selectedBarberDetails.schedule.length > 0 ? (
-                                <div className="dashboard-mobile-schedule-list">
-                                    {selectedBarberDetails.schedule.map((apt) => (
-                                        <div
-                                            key={apt.id}
-                                            className="dashboard-mobile-schedule-item"
-                                        >
-                                            <div className="dashboard-mobile-schedule-time">
-                                                {String(apt.time || "").slice(0, 5)}
-                                            </div>
-                                            <div className="dashboard-mobile-schedule-info">
-                                                <strong>{apt.userName || "Cliente"}</strong>
-                                                <div className="dashboard-mobile-schedule-meta">
-                                                    {apt.serviceName || "Serviço"} • {apt.date}
-                                                </div>
-                                            </div>
-                                            <div
-                                                className={`dashboard-mobile-schedule-status ${apt.status || ""}`}
-                                            >
-                                                {apt.status}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="dashboard-mobile-empty">
-                                    Nenhum agendamento encontrado para este barbeiro.
-                                </div>
-                            )}
+                                <button
+                                    type="button"
+                                    className={`dashboard-mobile-chip-btn ${chartMode === "cuts" ? "is-active" : ""}`}
+                                    onClick={() => setChartMode("cuts")}
+                                >
+                                    <FiScissors size={12} />
+                                    <span>Cortes Realizados</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`dashboard-mobile-chip-btn ${chartMode === "revenue" ? "is-active" : ""}`}
+                                    onClick={() => setChartMode("revenue")}
+                                >
+                                    <span>Faturamento</span>
+                                </button>
+                            </div>
                         </section>
                     )}
+
+                    <section className="dashboard-mobile-chart-card">
+                        {showScheduleSection ? (() => {
+                            const weekDates = getWeekDates(agendaDate);
+                            const todayStr = getTodayStr();
+                            const WEEKDAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
+                            return (
+                                <div className="dashboard-mobile-agenda" aria-label="Agenda do barbeiro">
+                                    <div className="dashboard-mobile-agenda-header">
+                                        <span className="dashboard-mobile-agenda-title">
+                                            Agenda de {selectedBarber.name}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="dashboard-mobile-agenda-close"
+                                            onClick={() => setShowScheduleSection(false)}
+                                            aria-label="Fechar agenda"
+                                        >
+                                            <FiX size={16} />
+                                        </button>
+                                    </div>
+
+                                    <div className="dashboard-mobile-agenda-inner">
+                                        <div className="dashboard-mobile-agenda-month">
+                                            <button
+                                                type="button"
+                                                className="dashboard-mobile-agenda-nav"
+                                                onClick={() => handleAgendaWeekShift(-1)}
+                                                aria-label="Semana anterior"
+                                            >
+                                                <FiChevronLeft size={16} />
+                                            </button>
+                                            <span>{formatAgendaMonthLabel(agendaDate)}</span>
+                                            <button
+                                                type="button"
+                                                className="dashboard-mobile-agenda-nav"
+                                                onClick={() => handleAgendaWeekShift(1)}
+                                                aria-label="Próxima semana"
+                                            >
+                                                <FiChevronRight size={16} />
+                                            </button>
+                                        </div>
+
+                                        <div className="dashboard-mobile-agenda-weekdays">
+                                            {WEEKDAYS.map(d => <span key={d}>{d}</span>)}
+                                        </div>
+
+                                        <div className="dashboard-mobile-agenda-week">
+                                            {weekDates.map(date => {
+                                                const ds = formatDateValue(date);
+                                                const isSelected = ds === agendaDate;
+                                                const isToday = ds === todayStr;
+                                                return (
+                                                    <button
+                                                        key={ds}
+                                                        type="button"
+                                                        className={`dashboard-mobile-agenda-day${isSelected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}`}
+                                                        onClick={() => handleAgendaDaySelect(date)}
+                                                    >
+                                                        {date.getDate()}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="dashboard-mobile-agenda-summary">
+                                        {formatAgendaSummary(agendaDate, agendaAppointments.length)}
+                                    </div>
+
+                                    <div className="dashboard-mobile-agenda-list">
+                                        {agendaLoading ? (
+                                            <div className="dashboard-mobile-empty">Carregando...</div>
+                                        ) : agendaError ? (
+                                            <div className="dashboard-mobile-empty">{agendaError}</div>
+                                        ) : agendaAppointments.length === 0 ? (
+                                            <div className="dashboard-mobile-empty">Nenhum agendamento nesta data.</div>
+                                        ) : agendaAppointments.map(apt => (
+                                            <div key={apt.id} className="dashboard-mobile-schedule-item">
+                                                <div className="dashboard-mobile-schedule-time">
+                                                    {String(apt.time || '').slice(0, 5)}
+                                                </div>
+                                                <div className="dashboard-mobile-schedule-info">
+                                                    <strong>{apt.user_name || apt.userName || 'Cliente'}</strong>
+                                                    <div className="dashboard-mobile-schedule-meta">
+                                                        {apt.service_name || apt.serviceName || 'Serviço'}
+                                                    </div>
+                                                </div>
+                                                <div className={`dashboard-mobile-schedule-status ${apt.status || ''}`}>
+                                                    {apt.status}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })() : (
+                            <div className="dashboard-mobile-chart-bars">
+                                {selectedChartData.map((item) => (
+                                    <div key={item.label} className="dashboard-mobile-chart-column">
+                                        <strong>{item.value}</strong>
+                                        <div className="dashboard-mobile-chart-track">
+                                            <span
+                                                className="dashboard-mobile-chart-bar"
+                                                style={{
+                                                    height: `${Math.max((item.value / maxBarValue) * 100, 22)}%`,
+                                                }}
+                                            />
+                                        </div>
+                                        <span>{item.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 </main>
 
                 <BottomNav active={activeNav} onNavigate={(id) => handleNavigate(id)} />

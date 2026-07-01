@@ -523,6 +523,132 @@
   color: #ff9d9d;
 }
 
+.dashboard-mobile-empty {
+  padding: 14px 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(246, 241, 228, 0.44);
+}
+
+/* Agenda inside chart card */
+.dashboard-mobile-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dashboard-mobile-agenda-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-mobile-agenda-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.dashboard-mobile-agenda-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(246, 241, 228, 0.7);
+  display: grid;
+  place-items: center;
+}
+
+.dashboard-mobile-agenda-inner {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard-mobile-agenda-month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-mobile-agenda-month span {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #f6f1e4;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-mobile-agenda-nav {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(246, 241, 228, 0.8);
+  display: grid;
+  place-items: center;
+}
+
+.dashboard-mobile-agenda-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+
+.dashboard-mobile-agenda-weekdays span {
+  font-size: 0.6rem;
+  color: rgba(246, 241, 228, 0.38);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-mobile-agenda-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dashboard-mobile-agenda-day {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: rgba(246, 241, 228, 0.8);
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+
+.dashboard-mobile-agenda-day.is-today {
+  color: #e2bd39;
+  font-weight: 800;
+}
+
+.dashboard-mobile-agenda-day.is-selected {
+  background: #e2bd39;
+  color: #111111;
+  font-weight: 800;
+}
+
+.dashboard-mobile-agenda-summary {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(246, 241, 228, 0.5);
+  text-transform: uppercase;
+}
+
+.dashboard-mobile-agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 @media (max-width: 420px) {
   .dashboard-mobile-page {
     padding-left: 10px;

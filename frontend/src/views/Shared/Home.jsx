@@ -3,9 +3,10 @@ import '../../styles/Shared/Home.css';
 import banner from '../../assets/image.png';
 import BottomNav from '../../components/BottomNav/BottomNav';
 import { FiTrash2, FiBell } from 'react-icons/fi';
-import { fetchMyAppointments, cancelAppointment } from '../../services/dashboardService';
+import { getMyAppointments, cancelAppointment } from '../../services/appointmentService';
 import { getUnreadCount } from '../../services/notificationService';
 import NotificationPanel from '../../components/Notification/NotificationPanel';
+import { getStoredUser } from '../../utils/authHelper';
 
 function translateStatus(status) {
   const statusMap = {
@@ -17,8 +18,7 @@ function translateStatus(status) {
 }
 
 export default function Home({ onStartBooking, onNavigate }) {
-  const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user') || '{}';
-  const user = JSON.parse(storedUser);
+  const user = getStoredUser() || {};
 
   const [isCancelModalOpen, setIsCancelModalOpen] = React.useState(false);
   const [nextAppointment, setNextAppointment] = React.useState(null);
@@ -34,7 +34,7 @@ export default function Home({ onStartBooking, onNavigate }) {
     setLoading(true);
     try {
       const now = new Date();
-      const appointments = await fetchMyAppointments();
+      const appointments = await getMyAppointments();
 
       if (Array.isArray(appointments) && appointments.length > 0) {
         const futureAppointments = appointments.filter(apt => {
