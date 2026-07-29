@@ -4,18 +4,21 @@ const AppointmentController = require('../controllers/AppointmentController');
 const { authenticate } = require('../middlewares/auth');
 
 router.post('/', AppointmentController.create);
+router.post('/manual', authenticate, AppointmentController.createManual);
 router.get('/', AppointmentController.findAll);
 router.get('/my', authenticate, AppointmentController.findMyAppointments);
 router.get('/my/past-future', authenticate, AppointmentController.findMyPastAndFutureAppointments);
 router.get('/barber/:barberId', AppointmentController.findByBarber);
 router.get('/date/:date', AppointmentController.findByDate);
 router.get('/available-times/:barberId', AppointmentController.getAvailableTimes);
+router.get('/manual/available-times/:barberId', authenticate, AppointmentController.getManualAvailableTimes);
 router.get('/schedule/:barberId/date/:date', authenticate, AppointmentController.getBarberSchedule);
 router.get('/schedule/:barberId/range', authenticate, AppointmentController.getBarberScheduleByDateRange);
 router.get('/:id', AppointmentController.findById);
 router.put('/:id/status', AppointmentController.updateStatus);
 router.post('/:id/confirm', AppointmentController.confirm);
 router.put('/:id/cancel', AppointmentController.cancel);
+router.delete('/:id/history', authenticate, AppointmentController.deleteFromHistory);
 router.delete('/:id', AppointmentController.delete);
 
 module.exports = router;

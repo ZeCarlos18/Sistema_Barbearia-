@@ -103,6 +103,7 @@ class Appointment {
         LEFT JOIN users b ON a.barber_id = b.id
         LEFT JOIN services s ON a.service_id = s.id
         WHERE a.user_id = ?
+          AND (a.hidden_from_history IS NULL OR a.hidden_from_history = 0)
         ORDER BY a.date DESC, a.time DESC
       `, [userId]);
       
@@ -263,6 +264,7 @@ class Appointment {
         LEFT JOIN services s ON a.service_id = s.id
         WHERE a.user_id = ?
           AND a.status IN ('confirmed', 'completed', 'cancelled')
+          AND (a.hidden_from_history IS NULL OR a.hidden_from_history = 0)
         ORDER BY a.date ASC, a.time ASC
       `, [userId]);
 
@@ -324,6 +326,32 @@ class Appointment {
    */
   static async cancel(id) {
     return await this.updateStatus(id, 'cancelled');
+  }
+
+  /**
+   * Ocultar um corte do histórico do usuário (RF28)
+   * Não remove o registro administrativo: apenas marca hidden_from_history = 1,
+   * o que faz o agendamento deixar de aparecer em findByUserId / findPastAndFutureByUserId.
+   * Só é permitido para agendamentos do próprio usuário com status "completed" ou "cancelled".
+   * @param {Number} id - ID do agendamento
+   * @param {Number} userId - ID do usuário dono do agendamento
+   * @returns {Boolean} True se ocultado com sucesso
+   */
+  static async hideFromHistory(id, userId) {
+    const connection = await pool.getConnection();
+
+    try {
+      const [result] = await connection.query(
+        `UPDATE appointments
+         SET hidden_from_history = 1, updated_at = NOW()
+         WHERE id = ? AND user_id = ? AND status IN ('completed', 'cancelled')`,
+        [id, userId]
+      );
+
+      return result.affectedRows > 0;
+    } finally {
+      connection.release();
+    }
   }
 
   /**

@@ -2,6 +2,9 @@ const Appointment = require('../models/Appointment');
 const Service = require('../models/Service');
 const Waitlist = require('../models/Waitlist');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
+const BarberAvailability = require('../models/BarberAvailability');
+const Unavailability = require('../models/Unavailability');
 const { handleError } = require('../utils/errorHandler')
 
 // Função auxiliar para gerar a grade de horários da barbearia
@@ -12,6 +15,97 @@ const generateTimeSlots = () => {
     slots.push(`${hour.toString().padStart(2, '0')}:30`);
   }
   return slots;
+};
+
+// ---- Auxiliares para o Registro Manual de Agendamento (RF26) ----
+
+/**
+ * Normaliza um valor de horário vindo do MySQL (string "HH:MM:SS" ou objeto Date/TIME)
+ * para o formato "HH:MM".
+ */
+const normalizeTimeValue = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return value.substring(0, 5);
+  const hours = String(value.getHours()).padStart(2, '0');
+  const minutes = String(value.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+/**
+ * Faz o parse da coluna users.available_days (armazenada como JSON string, ex: "[1,2,3,4,5]")
+ * para um array de números (0=Domingo ... 6=Sábado, mesma convenção do Date.getDay()).
+ */
+const parseAvailableDays = (raw) => {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(Number).filter((n) => !Number.isNaN(n));
+  } catch (e) {
+    // Não era JSON válido; tenta formato "1,2,3"
+  }
+  if (typeof raw === 'string') {
+    const fallback = raw.split(',').map((s) => Number(s.trim())).filter((n) => !Number.isNaN(n));
+    return fallback.length > 0 ? fallback : null;
+  }
+  return null;
+};
+
+/**
+ * Valida se a data/horário escolhidos estão dentro do período de atendimento do barbeiro
+ * (dias disponíveis + horário de início/fim configurados em BarberAvailability).
+ * Se o barbeiro ainda não configurou essa agenda (valores nulos), não bloqueia.
+ */
+const validateBarberWorkingHours = (schedule, date, time) => {
+  if (!schedule) return { ok: true };
+
+  const availableDays = parseAvailableDays(schedule.available_days);
+  if (availableDays && availableDays.length > 0) {
+    const [year, month, day] = date.split('-').map(Number);
+    const weekday = new Date(year, month - 1, day).getDay();
+    if (!availableDays.includes(weekday)) {
+      return { ok: false, message: 'O barbeiro não atende neste dia da semana.' };
+    }
+  }
+
+  const start = normalizeTimeValue(schedule.start_time);
+  const end = normalizeTimeValue(schedule.end_time);
+  if (start && end) {
+    if (time < start || time >= end) {
+      return { ok: false, message: `O barbeiro atende apenas entre ${start} e ${end}.` };
+    }
+  }
+
+  return { ok: true };
+};
+
+/**
+ * Constrói a lista de horários bloqueados por indisponibilidades ativas (RF12) de um barbeiro
+ * em uma data específica. Retorna { fullDayBlocked, blockedTimes }.
+ */
+const buildUnavailabilityBlocks = (activeUnavailabilities) => {
+  const fullDayBlocked = activeUnavailabilities.some(
+    (u) => u.start_time === null && u.end_time === null
+  );
+
+  const blockedTimes = [];
+  if (!fullDayBlocked) {
+    for (const u of activeUnavailabilities) {
+      if (u.start_time && u.end_time) {
+        const start = normalizeTimeValue(u.start_time);
+        const end = normalizeTimeValue(u.end_time);
+        let [curH, curM] = start.split(':').map(Number);
+        const [endH, endM] = end.split(':').map(Number);
+        while (curH < 24) {
+          blockedTimes.push(`${String(curH).padStart(2, '0')}:${String(curM).padStart(2, '0')}`);
+          if (curH === endH && curM === endM) break;
+          curM += 30;
+          if (curM >= 60) { curM = 0; curH += 1; }
+        }
+      }
+    }
+  }
+
+  return { fullDayBlocked, blockedTimes };
 };
 
 class AppointmentController {
@@ -239,6 +333,230 @@ class AppointmentController {
       res.json({ success: true, message: 'Agendamento deletado' });
     } catch (error) {
       handleError(res, error, 'Erro ao deletar agendamento');
+    }
+  }
+
+  /**
+   * RF28 - Apagar Cortes do Histórico
+   * Remove o agendamento apenas da visão de histórico do próprio usuário (soft-hide).
+   * Não altera os registros administrativos: o agendamento continua existindo e visível
+   * para o barbeiro/admin nas telas de agenda.
+   * Só é permitido para agendamentos do próprio usuário com status "completed" (Realizado)
+   * ou "cancelled" (Cancelado); agendamentos "confirmed" (Confirmado) não podem ser removidos.
+   */
+  static async deleteFromHistory(req, res) {
+    try {
+      if (!req.userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+
+      const { id } = req.params;
+      const appointment = await Appointment.findById(id);
+
+      if (!appointment) {
+        return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
+      }
+
+      if (String(appointment.user_id) !== String(req.userId)) {
+        return res.status(403).json({ success: false, message: 'Você só pode remover agendamentos do seu próprio histórico' });
+      }
+
+      if (!['completed', 'cancelled'].includes(appointment.status)) {
+        return res.status(409).json({
+          success: false,
+          message: 'Apenas agendamentos com status Realizado ou Cancelado podem ser removidos do histórico.'
+        });
+      }
+
+      const hidden = await Appointment.hideFromHistory(id, req.userId);
+      if (!hidden) {
+        return res.status(409).json({ success: false, message: 'Não foi possível remover o agendamento do histórico.' });
+      }
+
+      res.json({ success: true, message: 'Agendamento removido do histórico com sucesso.' });
+    } catch (error) {
+      handleError(res, error, 'Erro ao remover agendamento do histórico', 'AppointmentController');
+    }
+  }
+
+  /**
+   * RF26 - Registrar Agendamento Manualmente
+   * Permite que um barbeiro (apenas em sua própria agenda) ou o barbeiro chefe/admin
+   * (em qualquer agenda de barbeiro disponível) registre um agendamento em nome de um
+   * cliente que agendou fora do sistema (presencial, telefone ou WhatsApp).
+   * O agendamento é criado diretamente com status "confirmed".
+   */
+  static async createManual(req, res) {
+    try {
+      if (!req.userId || !req.userRole) {
+        return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      }
+      if (!['barber', 'admin'].includes(req.userRole)) {
+        return res.status(403).json({ success: false, message: 'Apenas barbeiros ou o barbeiro chefe podem registrar agendamentos manuais.' });
+      }
+
+      const { serviceId, date, time, barberId, clientId, clientName, clientPhone } = req.body;
+
+      // 1. Resolve o barbeiro alvo da agenda
+      let targetBarberId;
+      if (req.userRole === 'barber') {
+        if (barberId && String(barberId) !== String(req.userId)) {
+          return res.status(403).json({ success: false, message: 'Barbeiros só podem registrar agendamentos em sua própria agenda.' });
+        }
+        targetBarberId = req.userId;
+      } else {
+        // barbeiro chefe (admin): pode direcionar para qualquer barbeiro disponível
+        if (!barberId) {
+          return res.status(400).json({ success: false, message: 'Selecione o barbeiro para o agendamento.' });
+        }
+        targetBarberId = barberId;
+      }
+
+      const targetBarber = await User.findById(targetBarberId);
+      if (!targetBarber || targetBarber.role !== 'barber') {
+        return res.status(404).json({ success: false, message: 'Barbeiro não encontrado.' });
+      }
+      if (Number(targetBarber.active) === 0) {
+        return res.status(409).json({ success: false, message: 'Este barbeiro está inativo e não pode receber novos agendamentos.' });
+      }
+
+      // 2. Validação dos campos obrigatórios
+      if (!serviceId || !date || !time) {
+        return res.status(400).json({ success: false, message: 'Serviço, data e horário são obrigatórios.' });
+      }
+
+      const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+      const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+      if (!dateRegex.test(date) || !timeRegex.test(time)) {
+        return res.status(400).json({ success: false, message: 'Data ou horário inválidos.' });
+      }
+
+      const service = await Service.findById(serviceId);
+      if (!service) return res.status(404).json({ success: false, message: 'Serviço não encontrado.' });
+
+      // 3. Não permite agendar no passado
+      const [year, month, day] = date.split('-').map(Number);
+      const [hour, minute] = time.split(':').map(Number);
+      const appointmentDateTime = new Date(year, month - 1, day, hour, minute, 0, 0);
+      if (appointmentDateTime <= new Date()) {
+        return res.status(400).json({ success: false, message: 'Não é possível agendar em um horário passado.' });
+      }
+
+      // 4. Valida se o horário está dentro do período de atendimento do barbeiro
+      const schedule = await BarberAvailability.getSchedule(targetBarberId);
+      const scheduleCheck = validateBarberWorkingHours(schedule, date, time);
+      if (!scheduleCheck.ok) {
+        return res.status(409).json({ success: false, message: scheduleCheck.message });
+      }
+
+      // 5. Valida indisponibilidades ativas do barbeiro
+      const activeUnavailabilities = await Unavailability.findActiveUnavailabilities(targetBarberId, date, time);
+      if (activeUnavailabilities.length > 0) {
+        return res.status(409).json({ success: false, message: 'O barbeiro está indisponível neste dia/horário.' });
+      }
+
+      // 6. Valida se o horário já está ocupado
+      const occupiedTimes = await Appointment.getOccupiedTimes(targetBarberId, date);
+      if (occupiedTimes.includes(time)) {
+        return res.status(409).json({ success: false, message: 'Este horário já está ocupado na agenda do barbeiro.' });
+      }
+
+      // 7. Resolve o cliente (cadastro existente via clientId, ou nome+telefone para cliente sem conta)
+      let clientUser;
+      if (clientId) {
+        clientUser = await User.findById(clientId);
+        if (!clientUser) {
+          return res.status(404).json({ success: false, message: 'Cliente informado não encontrado.' });
+        }
+      } else {
+        if (!clientName || !clientName.trim() || !clientPhone || !clientPhone.trim()) {
+          return res.status(400).json({
+            success: false,
+            message: 'Informe o cliente por um cadastro existente (clientId) ou pelo nome e telefone.'
+          });
+        }
+
+        const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/;
+        if (!nameRegex.test(clientName.trim())) {
+          return res.status(400).json({ success: false, message: 'Nome do cliente inválido: utilize apenas letras e espaços.' });
+        }
+
+        const formattedPhone = clientPhone.replace(/\D/g, '');
+        if (formattedPhone.length < 10 || formattedPhone.length > 11) {
+          return res.status(400).json({ success: false, message: 'Telefone do cliente inválido: deve conter DDD e número (10 a 11 dígitos).' });
+        }
+
+        const { user } = await User.findOrCreateClient({ name: clientName.trim(), phone: formattedPhone });
+        clientUser = user;
+      }
+
+      // 8. Cria o agendamento já com status "confirmed"
+      const appointment = await Appointment.create({
+        userId: clientUser.id,
+        barberId: targetBarberId,
+        serviceId,
+        date,
+        time
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Agendamento manual registrado com sucesso.',
+        data: {
+          ...appointment,
+          client: { id: clientUser.id, name: clientUser.name, phone: clientUser.phone }
+        }
+      });
+    } catch (error) {
+      handleError(res, error, 'Erro ao registrar agendamento manual', 'AppointmentController');
+    }
+  }
+
+  /**
+   * RF26 (apoio) - Horários disponíveis para o registro manual
+   * Retorna os horários livres da agenda do barbeiro autenticado (role "barber") ou do
+   * barbeiro selecionado pelo barbeiro chefe (role "admin"), já descontando horários
+   * ocupados, indisponibilidades ativas e o período de atendimento configurado do barbeiro.
+   */
+  static async getManualAvailableTimes(req, res) {
+    try {
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (!['barber', 'admin'].includes(req.userRole)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
+      const { barberId } = req.params;
+      const { date } = req.query;
+
+      if (req.userRole === 'barber' && String(req.userId) !== String(barberId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiros só podem consultar sua própria agenda.' });
+      }
+
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ success: false, message: 'Data inválida.' });
+      }
+
+      const barber = await User.findById(barberId);
+      if (!barber || barber.role !== 'barber') {
+        return res.status(404).json({ success: false, message: 'Barbeiro não encontrado.' });
+      }
+      if (Number(barber.active) === 0) {
+        return res.status(409).json({ success: false, message: 'Barbeiro inativo.' });
+      }
+
+      const schedule = await BarberAvailability.getSchedule(barberId);
+      const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
+      const activeUnavailabilities = await Unavailability.findActiveUnavailabilities(barberId, date, null);
+      const { fullDayBlocked, blockedTimes } = buildUnavailabilityBlocks(activeUnavailabilities);
+
+      const allTimes = generateTimeSlots();
+      const availableTimes = fullDayBlocked ? [] : allTimes.filter((slot) => {
+        if (occupiedTimes.includes(slot)) return false;
+        if (blockedTimes.includes(slot)) return false;
+        return validateBarberWorkingHours(schedule, date, slot).ok;
+      });
+
+      res.json({ success: true, data: { barberId, date, availableTimes } });
+    } catch (error) {
+      handleError(res, error, 'Erro ao buscar horários disponíveis para agendamento manual', 'AppointmentController');
     }
   }
 

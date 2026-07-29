@@ -67,6 +67,31 @@ async function setupDatabase() {
       console.log('✅ Coluna "active" adicionada à tabela "users"');
     }
 
+    // Colunas de agenda do barbeiro (dias/horário de atendimento) e foto de perfil.
+    // Já eram enviadas pelo AdminController ao criar um barbeiro, mas precisam existir
+    // na tabela para serem persistidas por User.create / BarberAvailability.setSchedule.
+    const barberScheduleColumns = [
+      { name: 'available_days', ddl: 'VARCHAR(50) NULL DEFAULT NULL' },
+      { name: 'start_time', ddl: 'TIME NULL DEFAULT NULL' },
+      { name: 'end_time', ddl: 'TIME NULL DEFAULT NULL' },
+      { name: 'photo_url', ddl: 'LONGTEXT NULL' }
+    ];
+
+    for (const column of barberScheduleColumns) {
+      const [existingColumn] = await connection.query(`
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = ?
+          AND TABLE_NAME = 'users'
+          AND COLUMN_NAME = ?
+      `, [process.env.DB_NAME || 'barbearia_db', column.name]);
+
+      if (!existingColumn || existingColumn.length === 0) {
+        await connection.query(`ALTER TABLE users ADD COLUMN ${column.name} ${column.ddl}`);
+        console.log(`✅ Coluna "${column.name}" adicionada à tabela "users"`);
+      }
+    }
+
     // Criar tabela de serviços
     await connection.query(`
       CREATE TABLE IF NOT EXISTS services (
@@ -105,6 +130,24 @@ async function setupDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     console.log('✅ Tabela "appointments" criada/verificada');
+
+    // hidden_from_history (RF28): permite ocultar um corte do histórico do usuário
+    // sem apagar o registro administrativo do agendamento.
+    const [hiddenFromHistoryColumn] = await connection.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'appointments'
+        AND COLUMN_NAME = 'hidden_from_history'
+    `, [process.env.DB_NAME || 'barbearia_db']);
+
+    if (!hiddenFromHistoryColumn || hiddenFromHistoryColumn.length === 0) {
+      await connection.query(`
+        ALTER TABLE appointments
+        ADD COLUMN hidden_from_history TINYINT(1) NOT NULL DEFAULT 0
+      `);
+      console.log('✅ Coluna "hidden_from_history" adicionada à tabela "appointments"');
+    }
 
     // Criar tabela de indisponibilidades (RF12)
     await connection.query(`

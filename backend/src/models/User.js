@@ -1,10 +1,11 @@
 const pool = require('../database');
 const bcryptjs = require('bcryptjs');
+const crypto = require('crypto');
 
 class User {
   /**
    * Criar novo usuário no banco de dados
-   * @param {Object} userData - Dados do usuário {email, password, name, phone, role}
+   * @param {Object} userData - Dados do usuário {email, password, name, phone, role, availableDays, startTime, endTime, photoUrl}
    * @returns {Object} Dados do usuário criado
    */
 
@@ -14,7 +15,11 @@ class User {
       password, 
       name, 
       phone = null, 
-      role = 'client'
+      role = 'client',
+      availableDays = null,
+      startTime = null,
+      endTime = null,
+      photoUrl = null
     } = userData;
     
     const connection = await pool.getConnection();
@@ -31,15 +36,56 @@ class User {
       
       const [result] = await connection.query(
         `INSERT INTO users 
-        (name, email, password, phone, role, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
-        [name, email, hashedPassword, phone, role]
+        (name, email, password, phone, role, available_days, start_time, end_time, photo_url, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [name, email, hashedPassword, phone, role, availableDays, startTime, endTime, photoUrl]
       );
       
-      return { id: result.insertId, name, email, createdAt: new Date() };
+      return { id: result.insertId, name, email, phone, role, createdAt: new Date() };
     } finally {
       connection.release();
     }
+  }
+
+  /**
+   * Buscar um cliente existente pelo telefone ou criar um cadastro mínimo para ele.
+   * Usado no registro manual de agendamentos (RF26), quando o cliente agenda por
+   * telefone, WhatsApp ou presencialmente e pode não possuir conta no sistema.
+   * @param {Object} data - {name, phone}
+   * @returns {Object} { user, created } - usuário encontrado/criado e se foi criado agora
+   */
+  static async findOrCreateClient({ name, phone }) {
+    const connection = await pool.getConnection();
+    try {
+      const [existing] = await connection.query(
+        'SELECT id, name, email, phone, role FROM users WHERE phone = ?',
+        [phone]
+      );
+
+      if (existing.length > 0) {
+        return { user: existing[0], created: false };
+      }
+    } finally {
+      connection.release();
+    }
+
+    // Cliente não encontrado: cria um cadastro mínimo (login por senha não é o objetivo aqui,
+    // já que o agendamento foi feito fora do sistema pelo próprio barbeiro).
+    const placeholderEmail = `cliente.${phone}.${Date.now()}@barbearia.local`;
+    const randomPassword = crypto.randomBytes(16).toString('hex');
+
+    const created = await this.create({
+      name,
+      email: placeholderEmail,
+      password: randomPassword,
+      phone,
+      role: 'client'
+    });
+
+    return {
+      user: { id: created.id, name: created.name, email: created.email, phone, role: 'client' },
+      created: true
+    };
   }
 
   /**

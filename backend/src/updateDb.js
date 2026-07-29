@@ -62,6 +62,15 @@ async function updateDatabase() {
       console.log('⚠️ Aviso: "photo_url" (Provavelmente já existe) - Detalhe:', e.message);
     }
 
+    console.log('⏳ Adicionando novas colunas à tabela appointments...');
+
+    try {
+      await connection.query('ALTER TABLE appointments ADD COLUMN hidden_from_history TINYINT(1) NOT NULL DEFAULT 0;');
+      console.log('✅ Coluna "hidden_from_history" adicionada com sucesso.');
+    } catch (e) {
+      console.log('⚠️ Aviso: "hidden_from_history" (Provavelmente já existe) - Detalhe:', e.message);
+    }
+
     await connection.end();
     console.log('\n🎉 Atualização do banco de dados concluída!');
     process.exit(0);
