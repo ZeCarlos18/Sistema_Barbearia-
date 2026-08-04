@@ -346,6 +346,28 @@ class User {
   }
 
   /**
+   * Atualizar senha usando e-mail (fluxo de recuperação)
+   * @param {String} email - E-mail do usuário
+   * @param {String} newPassword - Nova senha em texto plano
+   * @returns {Boolean} true quando atualizar com sucesso
+   */
+  static async updatePasswordByEmail(email, newPassword) {
+    const connection = await pool.getConnection();
+
+    try {
+      const hashedPassword = await bcryptjs.hash(newPassword, 10);
+      const [result] = await connection.query(
+        'UPDATE users SET password = ?, updated_at = NOW() WHERE email = ?',
+        [hashedPassword, email]
+      );
+
+      return result.affectedRows > 0;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
    * Excluir usuário por ID
    * @param {Number} id - ID do usuário
    * @returns {Boolean} True se excluído, false se não encontrado

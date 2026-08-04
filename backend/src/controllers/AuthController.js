@@ -216,6 +216,93 @@ static async register(req, res) {
       handleError(res, error, 'Erro ao listar usuários:', 'AuthController');
     }
   }
+
+  /**
+   * Verifica se o e-mail existe para iniciar o fluxo de recuperação
+   */
+  static async checkRecoverEmail(req, res) {
+    try {
+      const normalizedEmail = String(req.body.email || '').toLowerCase().trim();
+
+      if (!normalizedEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email é obrigatório'
+        });
+      }
+
+      const user = await User.findByEmail(normalizedEmail);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'E-mail não encontrado no sistema'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'E-mail encontrado. Você já pode redefinir a senha.'
+      });
+    } catch (error) {
+      handleError(res, error, 'Erro ao verificar e-mail de recuperação:', 'AuthController');
+    }
+  }
+
+  /**
+   * Redefine senha por e-mail no fluxo de recuperação
+   */
+  static async resetPasswordByEmail(req, res) {
+    try {
+      const normalizedEmail = String(req.body.email || '').toLowerCase().trim();
+      const { newPassword, confirmPassword } = req.body;
+
+      if (!normalizedEmail || !newPassword || !confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email, nova senha e confirmação são obrigatórios'
+        });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'A confirmação de senha não corresponde à nova senha'
+        });
+      }
+
+      const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{6,})/;
+      if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nova senha deve ter no mínimo 6 caracteres, uma letra maiúscula e um caractere especial'
+        });
+      }
+
+      const user = await User.findByEmail(normalizedEmail);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'E-mail não encontrado no sistema'
+        });
+      }
+
+      const updated = await User.updatePasswordByEmail(normalizedEmail, newPassword);
+      if (!updated) {
+        return res.status(500).json({
+          success: false,
+          message: 'Não foi possível atualizar a senha'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Senha alterada com sucesso',
+        redirectUrl: '/login'
+      });
+    } catch (error) {
+      handleError(res, error, 'Erro ao redefinir senha:', 'AuthController');
+    }
+  }
 }
 
 module.exports = AuthController;

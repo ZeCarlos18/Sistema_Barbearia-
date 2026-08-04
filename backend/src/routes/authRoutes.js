@@ -87,4 +87,24 @@ router.get('/profile',
  */
 router.get('/users', authenticate, requireAdmin, AuthController.getAllUsers);
 
+/**
+ * Verifica se e-mail existe para recuperação de senha
+ * POST /api/auth/recover/check-email
+ */
+router.post('/recover/check-email',
+  validateRequiredFields(['email']),
+  validateEmail,
+  AuthController.checkRecoverEmail
+);
+
+/**
+ * Redefinir senha por e-mail
+ * POST /api/auth/recover/reset
+ */
+router.post('/recover/reset',
+  validateRequiredFields(['email', 'newPassword', 'confirmPassword']),
+  validateEmail,
+  AuthController.resetPasswordByEmail
+);
+
 module.exports = router;

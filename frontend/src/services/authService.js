@@ -30,3 +30,17 @@ export async function logout() {
     throw error;
   }
 }
+
+export function checkRecoverEmail(email) {
+  return apiFetch('/api/auth/recover/check-email', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+}
+
+export function resetPasswordByEmail(payload) {
+  return apiFetch('/api/auth/recover/reset', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
