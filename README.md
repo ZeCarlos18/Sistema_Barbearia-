@@ -123,6 +123,7 @@ DB_NAME=barbearia_db
 NODE_ENV=development
 PORT=3001
 JWT_SECRET=your-secret-key
+RECOVERY_JWT_SECRET=your-recovery-secret-key
 ```
 
 **Nota**: Se seu MySQL tem senha, adicione em `DB_PASSWORD`

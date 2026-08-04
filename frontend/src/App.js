@@ -13,6 +13,7 @@ import Register from "./views/Shared/Register";
 import Login from "./views/Shared/Login";
 import Home from "./views/Shared/Home";
 import RecoverPassword from "./views/Shared/RecoverPassword";
+import ResetPassword from "./views/Shared/ResetPassword";
 import Booking from "./views/Client/Booking";
 import ClientSettings from "./views/Client/ClientSettings";
 import BarberDashboard from "./views/Barber/BarberDashboard"; 
@@ -149,6 +150,7 @@ function AppRoutes() {
       />
       <Route path="/register" element={<Register onBack={() => navigate("/")} />} />
       <Route path="/recover" element={<RecoverPassword onBackToLogin={() => navigate("/login")} />} />
+      <Route path="/reset-password" element={<ResetPassword onBackToLogin={() => navigate("/login")} onGoToRecover={() => navigate("/recover")} />} />
 
       {/* --- ROTAS PRIVADAS (CLIENTES) --- */}
       <Route

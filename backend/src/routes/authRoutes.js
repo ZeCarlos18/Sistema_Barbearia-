@@ -98,12 +98,11 @@ router.post('/recover/check-email',
 );
 
 /**
- * Redefinir senha por e-mail
+ * Redefinir senha com token de recuperação
  * POST /api/auth/recover/reset
  */
 router.post('/recover/reset',
-  validateRequiredFields(['email', 'newPassword', 'confirmPassword']),
-  validateEmail,
+  validateRequiredFields(['recoveryToken', 'newPassword', 'confirmPassword']),
   AuthController.resetPasswordByEmail
 );
 

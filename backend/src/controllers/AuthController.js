@@ -2,6 +2,21 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { handleError } = require('../utils/errorHandler');
 
+const RECOVERY_TOKEN_EXPIRES_IN = '15m';
+
+function getRecoverySecret() {
+  if (process.env.RECOVERY_JWT_SECRET) {
+    return process.env.RECOVERY_JWT_SECRET;
+  }
+
+  if (process.env.JWT_SECRET) {
+    console.warn('[AuthController] RECOVERY_JWT_SECRET não configurado. Usando JWT_SECRET como fallback temporário.');
+    return process.env.JWT_SECRET;
+  }
+
+  return null;
+}
+
 /**
  * AuthController - Controlador de autenticação
  * Gerencia as funções de registro, login e logout
@@ -88,7 +103,8 @@ static async register(req, res) {
    */
   static async login(req, res) {
     try {
-      const { email, password } = req.body;
+      const email = String(req.body.email || '').toLowerCase().trim();
+      const { password } = req.body;
 
       // Validar campos obrigatórios
       if (!email || !password) {
@@ -239,9 +255,32 @@ static async register(req, res) {
         });
       }
 
+      const recoverySecret = getRecoverySecret();
+      if (!recoverySecret) {
+        return res.status(500).json({
+          success: false,
+          message: 'RECOVERY_JWT_SECRET não configurado no ambiente'
+        });
+      }
+
+      const recoveryToken = jwt.sign(
+        {
+          purpose: 'password_recovery',
+          email: user.email,
+          userId: user.id
+        },
+        recoverySecret,
+        {
+          expiresIn: RECOVERY_TOKEN_EXPIRES_IN
+        }
+      );
+
       return res.status(200).json({
         success: true,
-        message: 'E-mail encontrado. Você já pode redefinir a senha.'
+        message: 'E-mail encontrado. Você já pode redefinir a senha.',
+        recoveryToken,
+        expiresIn: RECOVERY_TOKEN_EXPIRES_IN,
+        redirectUrl: '/reset-password'
       });
     } catch (error) {
       handleError(res, error, 'Erro ao verificar e-mail de recuperação:', 'AuthController');
@@ -254,12 +293,13 @@ static async register(req, res) {
   static async resetPasswordByEmail(req, res) {
     try {
       const normalizedEmail = String(req.body.email || '').toLowerCase().trim();
+      const { recoveryToken } = req.body;
       const { newPassword, confirmPassword } = req.body;
 
-      if (!normalizedEmail || !newPassword || !confirmPassword) {
+      if (!recoveryToken || !newPassword || !confirmPassword) {
         return res.status(400).json({
           success: false,
-          message: 'Email, nova senha e confirmação são obrigatórios'
+          message: 'Sessão de recuperação, nova senha e confirmação são obrigatórias'
         });
       }
 
@@ -278,7 +318,40 @@ static async register(req, res) {
         });
       }
 
-      const user = await User.findByEmail(normalizedEmail);
+      const recoverySecret = getRecoverySecret();
+      if (!recoverySecret) {
+        return res.status(500).json({
+          success: false,
+          message: 'RECOVERY_JWT_SECRET não configurado no ambiente'
+        });
+      }
+
+      let decodedRecoveryToken;
+      try {
+        decodedRecoveryToken = jwt.verify(recoveryToken, recoverySecret);
+      } catch (tokenError) {
+        return res.status(401).json({
+          success: false,
+          message: 'Sessão de recuperação inválida ou expirada'
+        });
+      }
+
+      if (decodedRecoveryToken?.purpose !== 'password_recovery' || !decodedRecoveryToken?.email) {
+        return res.status(401).json({
+          success: false,
+          message: 'Sessão de recuperação inválida'
+        });
+      }
+
+      const tokenEmail = String(decodedRecoveryToken.email).toLowerCase().trim();
+      if (normalizedEmail && normalizedEmail !== tokenEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'O e-mail informado não corresponde à sessão de recuperação'
+        });
+      }
+
+      const user = await User.findByEmail(tokenEmail);
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -286,7 +359,7 @@ static async register(req, res) {
         });
       }
 
-      const updated = await User.updatePasswordByEmail(normalizedEmail, newPassword);
+      const updated = await User.updatePasswordByEmail(tokenEmail, newPassword);
       if (!updated) {
         return res.status(500).json({
           success: false,

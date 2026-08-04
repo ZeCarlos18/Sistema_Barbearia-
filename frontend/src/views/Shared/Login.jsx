@@ -12,7 +12,14 @@ export default function Login({ onLoginSuccess, onGoToRegister, onGoToRecover })
   const [form, setForm] = React.useState({ email: '', password: '', remember: true });
   const [errors, setErrors] = React.useState({});
   const [loading, setLoading] = React.useState(false);
-  const [formMessage, setFormMessage] = React.useState('');
+  const [formMessage, setFormMessage] = React.useState(() => location.state?.message || '');
+
+  React.useEffect(() => {
+    if (location.state?.message) {
+      setFormMessage(location.state.message);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   function handleChange(event) {
     const { name, type, checked, value } = event.target;
@@ -55,7 +62,8 @@ export default function Login({ onLoginSuccess, onGoToRegister, onGoToRecover })
     setLoading(true);
 
     try {
-      const response = await login({ email: form.email, password: form.password });
+      const normalizedEmail = form.email.trim().toLowerCase();
+      const response = await login({ email: normalizedEmail, password: form.password });
 
       const storage = form.remember ? localStorage : sessionStorage;
       storage.setItem('token', response.token);

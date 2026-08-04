@@ -7,7 +7,7 @@ import './BottomNav.css';
 export default function BottomNav({ active = 'home', onNavigate }) {
   const location = useLocation();
 
-  const hiddenPaths = ['/', '/login', '/register', '/recover'];
+  const hiddenPaths = ['/', '/login', '/register', '/recover', '/reset-password'];
   if (hiddenPaths.includes(location.pathname)) return null;
 
   const role = getStoredUser()?.role || null;
