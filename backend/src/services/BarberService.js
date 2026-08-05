@@ -19,9 +19,10 @@ class BarberService {
                SUM(a.status = 'confirmed') AS confirmed_appointments,
                SUM(a.status = 'pending') AS pending_appointments,
                SUM(a.status = 'cancelled') AS cancelled_appointments,
-               COALESCE(SUM(CASE WHEN a.status = 'completed' THEN a.price ELSE 0 END), 0) AS total_revenue
+               COALESCE(SUM(CASE WHEN a.status = 'completed' THEN COALESCE(a.price, s.price, 0) ELSE 0 END), 0) AS total_revenue
         FROM users u
         LEFT JOIN appointments a ON a.barber_id = u.id
+        LEFT JOIN services s ON a.service_id = s.id
         WHERE u.role = 'barber'
         GROUP BY u.id
         ORDER BY u.name ASC

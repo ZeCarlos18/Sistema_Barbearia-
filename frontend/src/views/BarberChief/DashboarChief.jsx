@@ -8,6 +8,7 @@ import {
     FiCheck,
     FiScissors,
     FiX,
+    FiUserPlus,
 } from "react-icons/fi";
 import BottomNav from "../../components/BottomNav/BottomNav";
 import {
@@ -407,6 +408,15 @@ export default function DashboardBarbeiro() {
                         aria-label="Notificações"
                     >
                         <FiBell size={17} />
+                    </button>
+                    <button
+                        type="button"
+                        className="dashboard-mobile-create-btn"
+                        onClick={() => navigate('/barber-create')}
+                        aria-label="Criar Barbeiro"
+                    >
+                        <FiUserPlus size={16} />
+                        <span className="create-label">Criar barbeiro</span>
                     </button>
                 </header>
 

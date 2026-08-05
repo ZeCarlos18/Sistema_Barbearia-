@@ -50,6 +50,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 18px 18px 8px;
+  position: relative;
 }
 
 .chief-header--profile {
@@ -132,6 +133,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.chief-create-btn{
+  width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);display:grid;place-items:center;background:transparent;color:#fff;cursor:pointer
+}
+
+.chief-create-fixed{
+  position:absolute;right:16px;top:16px;width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);display:grid;place-items:center;background:#e1bc38;color:#111;z-index:40;cursor:pointer
 }
 
 .chief-icon-btn {

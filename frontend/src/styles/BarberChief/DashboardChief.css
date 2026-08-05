@@ -39,6 +39,21 @@
   padding: 18px 16px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+.dashboard-mobile-create-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #fff;
+    margin-left: 8px;
+    cursor: pointer;
+}
+.dashboard-mobile-create-btn .create-label {
+    font-size: 13px;
+}
 
 .dashboard-mobile-profile {
   display: flex;

@@ -10,6 +10,7 @@ import {
   FiLock,
   FiLogOut,
   FiPlus,
+  FiUserPlus,
   FiUser,
   FiUserX,
   FiUsers,
@@ -834,6 +835,16 @@ export default function BarberChief({
           >
             <FiBell size={18} />
           </button>
+          {user?.role === 'admin' ? (
+            <button
+              className="chief-create-btn"
+              type="button"
+              onClick={() => onOpenCreate ? onOpenCreate() : navigate('/barber-create')}
+              aria-label="Criar Barbeiro"
+            >
+              <FiUserPlus size={16} />
+            </button>
+          ) : null}
         </div>
       </>
     );
@@ -856,6 +867,15 @@ export default function BarberChief({
               className={`chief-header ${isProfile ? "chief-header--profile" : ""} ${isProfileAvailability ? "chief-header--subview" : ""}`}
             >
               {renderHeaderContent()}
+              {/* DEBUG: mostrar botão sempre para testes visuais */}
+              <button
+                className="chief-create-fixed"
+                type="button"
+                onClick={() => onOpenCreate ? onOpenCreate() : navigate('/barber-create')}
+                aria-label="Criar Barbeiro"
+              >
+                <FiUserPlus size={18} />
+              </button>
             </header>
 
             <main className="chief-main">
