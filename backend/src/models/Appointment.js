@@ -12,16 +12,13 @@ class Appointment {
     const connection = await pool.getConnection();
     
     try {
-      // Determine price: use providedPrice or fetch from service
-      let price = providedPrice;
-      if (price === undefined || price === null) {
-        const [svcRows] = await connection.query('SELECT price FROM services WHERE id = ?', [serviceId]);
-        price = svcRows && svcRows[0] ? svcRows[0].price : 0.00;
-      }
-
+      // Note: some older DB schemas may not have a dedicated `price` column
+      // in `appointments`. We'll avoid inserting into a non-existent column
+      // and instead store the appointment referencing the service. The
+      // service price can be retrieved when needed via JOIN with `services`.
       const [result] = await connection.query(
-        'INSERT INTO appointments (user_id, barber_id, service_id, price, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
-        [userId, barberId, serviceId, price, date, time]
+        'INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
+        [userId, barberId, serviceId, date, time]
       );
       
       return {

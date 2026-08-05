@@ -32,7 +32,7 @@
   transform: translate(-50%, -50%);
   
   /* Dimensões */
-  width: min(90vw, 370px);
+  width: min(90vw, 380px);
   max-height: 90vh;
   
   /* Layout */
@@ -42,13 +42,13 @@
   align-items: center;
   
   /* Espaçamento interno */
-  padding: 32px 24px;
+  padding: 28px 22px;
   
   /* Aparência */
-  background: #0a0a0a;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg,#080808 0%, #0f0f0f 100%);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(212,175,55,0.18);
   
   /* Overflow (se conteúdo for muito grande) */
   overflow-y: auto;
@@ -94,17 +94,13 @@
    ============================================ */
 
 .confirmation-modal__title {
-  /* Tipografia */
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #f7f2e6;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #fff;
   text-align: center;
-  
-  /* Reset default */
   margin: 0;
-  
-  /* Animação */
-  animation: fadeInDown 0.5s ease-out 0.1s both;
+  letter-spacing: 0.4px;
+  animation: fadeInDown 0.45s ease-out 0.08s both;
 }
 
 /* ============================================
@@ -118,13 +114,11 @@
   /* Espaçamento e layout */
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  
-  /* Aparência */
-  padding: 20px;
+  gap: 12px;
+  padding: 18px;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(212,175,55,0.08);
   
   /* Animação */
   animation: fadeInUp 0.5s ease-out 0.2s both;
@@ -153,21 +147,18 @@
 /* --- Label (rótulo) --- */
 
 .confirmation-modal__label {
-  /* Tipografia */
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #b8b8b8;
-  text-transform: capitalize;
-  letter-spacing: 0.5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cfcfcf;
+  text-transform: none;
 }
 
 /* --- Value (valor) --- */
 
 .confirmation-modal__value {
-  /* Tipografia */
   font-size: 0.95rem;
-  font-weight: 500;
-  color: #f7f2e6;
+  font-weight: 700;
+  color: #fff;
 }
 
 /* ============================================
@@ -175,28 +166,19 @@
    ============================================ */
 
 .confirmation-modal__button {
-  /* Dimensões */
   width: 100%;
-  padding: 14px 24px;
-  
-  /* Tipografia */
-  font-size: 1rem;
-  font-weight: 700;
+  padding: 12px 20px;
+  font-size: 0.98rem;
+  font-weight: 800;
   color: #111111;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  
-  /* Aparência */
+  text-transform: none;
+  letter-spacing: 0.4px;
   background: #d4af37;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  
-  /* Transição */
-  transition: all 0.2s ease-in-out;
-  
-  /* Animação de entrada */
-  animation: fadeInUp 0.5s ease-out 0.3s both;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+  animation: fadeInUp 0.42s ease-out 0.25s both;
 }
 
 .confirmation-modal__button:hover {
@@ -323,4 +305,49 @@
 
 .confirmation-modal::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Additional styles to match the design in the provided mockup */
+.confirmation-modal {
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.06), 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.confirmation-modal__details {
+  border: 1px solid rgba(212, 175, 55, 0.18);
+}
+
+.confirmation-modal__button--ghost {
+  background: transparent;
+  color: #f7f2e6;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.confirmation-modal__button--danger {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.confirmation-modal__checkbox {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #d0d0d0;
+  font-weight: 700;
+}
+
+.confirmation-modal__checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #d4af37;
+}
+
+.confirmation-modal__button--group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.confirmation-modal__button--group .confirmation-modal__button {
+  width: 50%;
 }

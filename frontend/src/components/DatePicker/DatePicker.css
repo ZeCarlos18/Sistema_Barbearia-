@@ -1,0 +1,15 @@
+.dp-root{position:relative;display:inline-block}
+.dp-toggle{background:#0f0f0f;color:#fff;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);cursor:pointer}
+.dp-popover{position:fixed;z-index:120;top:50%;left:50%;transform:translate(-50%,-50%);background:#111;padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);box-shadow:0 10px 40px rgba(0,0,0,0.6);width:min(360px,90vw)}
+.dp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.dp-nav{background:transparent;border:0;color:#ffd24d;font-size:20px;cursor:pointer}
+.dp-month{color:#fff;font-weight:600;text-transform:capitalize}
+.dp-weekdays{display:flex;gap:6px;margin-bottom:6px}
+.dp-weekday{flex:1;text-align:center;color:#999;font-size:12px}
+.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.dp-week{display:contents}
+.dp-cell{width:100%;height:40px;display:flex;align-items:center;justify-content:center}
+.dp-day-btn{width:40px;height:40px;border-radius:8px;border:0;background:#0d0d0d;color:#fff;cursor:pointer}
+.dp-day-btn:hover{background:#1a1a1a}
+.dp-empty{opacity:0}
+

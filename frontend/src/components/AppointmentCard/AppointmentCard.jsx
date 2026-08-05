@@ -24,7 +24,7 @@ import StatusBadge from '../StatusBadge/StatusBadge';
 import { isPastAppointment } from '../../utils/dateHelper';
 import './AppointmentCard.css';
 
-export default function AppointmentCard({ appointment, onDelete }) {
+export default function AppointmentCard({ appointment, onDelete, onRemoveFromHistory }) {
   const { id, serviceName, barberName, date, time, status } = appointment;
 
   /**
@@ -67,6 +67,7 @@ export default function AppointmentCard({ appointment, onDelete }) {
 
 
   const canCancel = onDelete && status === 'confirmado' && !isPastAppointment(date, time);
+  const canRemoveFromHistory = onRemoveFromHistory && (status === 'concluído' || status === 'cancelado');
 
   return (
     <article className="appointment-card">
@@ -74,12 +75,23 @@ export default function AppointmentCard({ appointment, onDelete }) {
       <div className="appointment-card__header">
         <StatusBadge status={status} />
         
-        {/* Botão de deletar blindado contra agendamentos passados */}
+        {/* Botões de ação: cancelar (para confirmados próximos) ou remover do histórico (para concluídos/cancelados) */}
         {canCancel && (
           <button
             className="appointment-card__delete"
             onClick={() => onDelete(id)}
             title="Cancelar agendamento"
+            type="button"
+          >
+            <FiTrash2 size={18} />
+          </button>
+        )}
+
+        {canRemoveFromHistory && (
+          <button
+            className="appointment-card__delete"
+            onClick={() => onRemoveFromHistory(id)}
+            title="Remover do histórico"
             type="button"
           >
             <FiTrash2 size={18} />

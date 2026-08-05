@@ -467,24 +467,32 @@ class AppointmentController {
           return res.status(404).json({ success: false, message: 'Cliente informado não encontrado.' });
         }
       } else {
-        if (!clientName || !clientName.trim() || !clientPhone || !clientPhone.trim()) {
+        // Allow creating manual appointment with only client name (phone optional)
+        if (!clientName || !clientName.trim()) {
           return res.status(400).json({
             success: false,
-            message: 'Informe o cliente por um cadastro existente (clientId) ou pelo nome e telefone.'
+            message: 'Informe o cliente por um cadastro existente (clientId) ou pelo nome.'
           });
         }
 
+        const nameTrim = clientName.trim();
         const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/;
-        if (!nameRegex.test(clientName.trim())) {
+        if (!nameRegex.test(nameTrim)) {
           return res.status(400).json({ success: false, message: 'Nome do cliente inválido: utilize apenas letras e espaços.' });
         }
 
-        const formattedPhone = clientPhone.replace(/\D/g, '');
-        if (formattedPhone.length < 10 || formattedPhone.length > 11) {
-          return res.status(400).json({ success: false, message: 'Telefone do cliente inválido: deve conter DDD e número (10 a 11 dígitos).' });
+        let formattedPhone = null;
+        if (clientPhone && String(clientPhone).trim()) {
+          const cleaned = String(clientPhone).replace(/\D/g, '');
+          // Accept phone only if reasonable length; otherwise ignore phone
+          if (cleaned.length >= 10 && cleaned.length <= 11) {
+            formattedPhone = cleaned;
+          } else {
+            formattedPhone = null;
+          }
         }
 
-        const { user } = await User.findOrCreateClient({ name: clientName.trim(), phone: formattedPhone });
+        const { user } = await User.findOrCreateClient({ name: nameTrim, phone: formattedPhone });
         clientUser = user;
       }
 

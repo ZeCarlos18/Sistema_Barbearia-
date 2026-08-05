@@ -1,32 +1,23 @@
 .appointment-card {
-  /* Layout */
   display: flex;
   flex-direction: column;
   gap: 12px;
-  
-  /* Dimensões e espaçamento */
-  padding: 16px;
-  border-radius: 12px;
-  
-  /* Aparência */
-  background: #171717;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  
-  /* Transição para interação */
-  transition: all 0.2s ease-in-out;
+  padding: 18px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #0f0f0f 0%, #141414 100%);
+  border: 1px solid rgba(212,175,55,0.06);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 /* Hover - feedback visual */
 .appointment-card:hover {
-  background: #1a1a1a;
-  border-color: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.6);
 }
 
 /* --- HEADER: Status e Botão Delete --- */
 .appointment-card__header {
-  /* Layout */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -34,30 +25,24 @@
 }
 
 .appointment-card__delete {
-  /* Layout e dimensões */
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
-  
-  /* Aparência */
   background: rgba(212, 175, 55, 0.12);
   color: #d4af37;
-  border: none;
+  border: 1px solid rgba(212,175,55,0.14);
   border-radius: 50%;
-  
-  /* Tipografia e cursor */
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  
-  /* Transição */
-  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(212,175,55,0.06) inset;
+  transition: transform 0.16s ease, background 0.16s ease;
 }
 
 .appointment-card__delete:hover {
-  background: rgba(212, 175, 55, 0.2);
-  transform: scale(1.05);
+  background: rgba(212, 175, 55, 0.18);
+  transform: scale(1.06);
 }
 
 .appointment-card__delete:active {
@@ -74,31 +59,27 @@
 }
 
 .appointment-card__info {
-  /* Layout */
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
 }
 
 .appointment-card__service {
-  /* Tipografia */
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
   margin: 0;
 }
 
 .appointment-card__barber {
-  /* Tipografia */
   font-size: 0.85rem;
-  color: #b8b8b8;
+  color: #cfcfcf;
   margin: 0;
 }
 
 /* --- TIME INFO: Data e Hora --- */
 .appointment-card__time-info {
-  /* Layout */
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -107,17 +88,15 @@
 }
 
 .appointment-card__date {
-  /* Tipografia */
-  font-size: 0.8rem;
-  color: #d0d0d0;
-  font-weight: 500;
+  font-size: 0.82rem;
+  color: #cfcfcf;
+  font-weight: 600;
 }
 
 .appointment-card__time {
-  /* Tipografia */
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: #d4af37;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 /* --- RESPONSIVIDADE --- */

@@ -21,6 +21,8 @@
   margin-top: 12px;
 }
 
+/* manual booking button styles removed (cleanup) */
+
 /* Responsivo: em telas menores */
 @media (max-width: 480px) {
   .stats-section {

@@ -5,7 +5,8 @@ import FilterTabs from '../../components/FilterTabs/FilterTabs';
 import AppointmentCard from '../../components/AppointmentCard/AppointmentCard';
 import EmptyState from '../../components/EmptyState/EmptyState';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import { getMyAppointments, cancelAppointment } from '../../services/appointmentService';
+import RemoveFromHistoryModal from '../../components/Modal/RemoveFromHistoryModal';
+import { getMyAppointments, cancelAppointment, deleteFromHistory } from '../../services/appointmentService';
 import { getStoredUser } from '../../utils/authHelper';
 import '../../styles/Client/Appointments.css';
 import { isPastAppointment } from "../../utils/dateHelper";
@@ -103,6 +104,37 @@ export default function Appointments({ onNavigate, onLogout }) {
     }
   }
 
+  // --- Remover do histórico (RF28) ---
+  const [removeModalOpen, setRemoveModalOpen] = React.useState(false);
+  const [selectedToRemove, setSelectedToRemove] = React.useState(null);
+
+  function openRemoveModal(appointmentId) {
+    const apt = appointments.find(a => a.id === appointmentId);
+    if (!apt) return;
+
+    const dontAsk = localStorage.getItem('dontAskRemoveHistory') === '1';
+    if (dontAsk) {
+      // apagar sem perguntar
+      handleConfirmRemove(appointmentId);
+      return;
+    }
+
+    setSelectedToRemove(apt);
+    setRemoveModalOpen(true);
+  }
+
+  async function handleConfirmRemove(appointmentId) {
+    try {
+      await deleteFromHistory(appointmentId);
+      // Atualiza lista localmente: oculta do histórico do usuário
+      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
+    } catch (err) {
+      // Trate erros específicos do backend (403/409)
+      const msg = err?.message || 'Erro ao remover do histórico';
+      alert(msg);
+    }
+  }
+
   return (
     <div className="appointments-page">
       <div className="appointments-phone">
@@ -157,6 +189,7 @@ export default function Appointments({ onNavigate, onLogout }) {
                       key={appointment.id}
                       appointment={appointment}
                       onDelete={handleDeleteAppointment}
+                      onRemoveFromHistory={openRemoveModal}
                     />
                   ))}
                 </div>
@@ -175,6 +208,13 @@ export default function Appointments({ onNavigate, onLogout }) {
                 />
               )}
             </section>
+            {/* Modal para remoção do histórico */}
+            <RemoveFromHistoryModal
+              isOpen={removeModalOpen}
+              onClose={() => setRemoveModalOpen(false)}
+              onConfirm={handleConfirmRemove}
+              appointment={selectedToRemove}
+            />
           </main>
 
           <BottomNav active="calendar" onNavigate={onNavigate} />

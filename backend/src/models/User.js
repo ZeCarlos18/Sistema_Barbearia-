@@ -57,13 +57,15 @@ class User {
   static async findOrCreateClient({ name, phone }) {
     const connection = await pool.getConnection();
     try {
-      const [existing] = await connection.query(
-        'SELECT id, name, email, phone, role FROM users WHERE phone = ?',
-        [phone]
-      );
+      if (phone) {
+        const [existing] = await connection.query(
+          'SELECT id, name, email, phone, role FROM users WHERE phone = ?',
+          [phone]
+        );
 
-      if (existing.length > 0) {
-        return { user: existing[0], created: false };
+        if (existing.length > 0) {
+          return { user: existing[0], created: false };
+        }
       }
     } finally {
       connection.release();
@@ -71,7 +73,7 @@ class User {
 
     // Cliente não encontrado: cria um cadastro mínimo (login por senha não é o objetivo aqui,
     // já que o agendamento foi feito fora do sistema pelo próprio barbeiro).
-    const placeholderEmail = `cliente.${phone}.${Date.now()}@barbearia.local`;
+    const placeholderEmail = phone ? `cliente.${phone}.${Date.now()}@barbearia.local` : `cliente.${Date.now()}@barbearia.local`;
     const randomPassword = crypto.randomBytes(16).toString('hex');
 
     const created = await this.create({

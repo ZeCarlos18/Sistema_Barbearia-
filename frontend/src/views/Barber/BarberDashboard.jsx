@@ -75,6 +75,7 @@ export default function BarberDashboard({ onNavigate }) {
           label="Restantes"
           variant="remaining"
         />
+        {/* manual booking button removed (cleanup of mock UI) */}
       </section>
 
       <ScheduleList

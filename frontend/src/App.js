@@ -20,6 +20,7 @@ import BarberDashboard from "./views/Barber/BarberDashboard";
 import BarberChief from "./views/BarberChief/BarberChief";
 import DashboardBarbeiro from "./views/BarberChief/DashboarChief";
 import BarberCreate from "./views/BarberChief/BarberCreate";
+import ManualBooking from "./views/Barber/ManualBooking";
 import Appointments from "./views/Client/Appointments";
 import BarberWaitlistPage from "./views/Barber/BarberWaitlistPage";
 
@@ -90,6 +91,8 @@ function AppRoutes() {
   };
 
   const handleClientNavigate = (page) => {
+    // If create (plus) pressed by client, open regular booking flow
+    if (page === 'create') return navigate('/booking');
     const routes = {
       dashboard: "/home",
       home: "/home",
@@ -101,8 +104,10 @@ function AppRoutes() {
 
   const handleBarberNavigate = (page) => {
     // Regra de exceção para criação
-    if (page === "create" && user?.role === "admin") {
-      return navigate("/barber-create");
+    // If the create button was pressed: admin -> barber-create, barber -> manual booking
+    if (page === 'create') {
+      if (user?.role === 'admin') return navigate('/barber-create');
+      return navigate('/barber-manual');
     }
 
     // Define a base correta dependendo se é admin ou barbeiro normal
@@ -238,6 +243,17 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      {/* manual booking route removed (cleanup) */}
+        <Route
+          path="/barber-manual"
+          element={
+            <ProtectedRoute allowedRoles={["barber", "admin"]}>
+              <React.Suspense fallback={<div>Carregando...</div>}>
+                <ManualBooking onBack={() => navigate(getDefaultRoute(user?.role))} onCreated={() => {/* nothing for now */}} />
+              </React.Suspense>
+            </ProtectedRoute>
+          }
+        />
       <Route
         path="/barber-create"
         element={

@@ -35,8 +35,7 @@ export default function StatusBadge({ status }) {
     <div
       className="status-badge"
       style={{
-        color: config.color,
-        backgroundColor: config.backgroundColor
+        color: config.color
       }}
     >
       {/* Dot (ponto) visual */}
