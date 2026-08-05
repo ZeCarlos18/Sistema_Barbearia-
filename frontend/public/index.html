@@ -29,59 +29,7 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <!-- Assistant debug: floating create button (temporary) -->
-    <button id="assistant-create-button" aria-label="Criar Agendamento" title="Criar Agendamento" style="position:fixed;right:16px;top:16px;z-index:9999;width:44px;height:44px;border-radius:10px;border:0;background:#e1bc38;color:#111;display:grid;place-items:center;box-shadow:0 10px 24px rgba(0,0,0,0.4);">
-      +
-    </button>
-    <script>
-      (function(){
-        var btn = document.getElementById('assistant-create-button');
-        if(!btn) return;
-
-        // Decide visibility: show on client Home and barber/admin dashboards.
-        function updateVisibility(){
-          try{
-            var raw = window.location.pathname || '/';
-            var path = String(raw).split('?')[0];
-            // allowed pages where the floating create button should appear
-            var allowed = ['/home', '/dashboard-chief', '/barber-dashboard', '/dashboard-barbeiro'];
-            if (allowed.includes(path) || path.startsWith('/home')) {
-              btn.style.display = 'grid';
-            } else {
-              btn.style.display = 'none';
-            }
-          }catch(e){
-            btn.style.display = 'none';
-          }
-        }
-
-        // Navigate to manual booking (barber manual). Admins can then pick any barber in that view.
-        btn.addEventListener('click', function(){
-          try{ window.location.href = '/barber-manual'; }catch(e){console.error(e)}
-        });
-
-        // Patch history methods so SPA navigation updates visibility
-        (function(){
-          var _wr = function(type){
-            var orig = history[type];
-            return function(){
-              var rv = orig.apply(this, arguments);
-              window.dispatchEvent(new Event('locationchange'));
-              return rv;
-            };
-          };
-          history.pushState = _wr('pushState');
-          history.replaceState = _wr('replaceState');
-          window.addEventListener('popstate', function(){ window.dispatchEvent(new Event('locationchange')); });
-        })();
-
-        // Update on location changes
-        window.addEventListener('locationchange', updateVisibility);
-
-        // Initial check
-        updateVisibility();
-      })();
-    </script>
+    <!-- debug floating button removed: use BarberChief UI for create actions -->
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.

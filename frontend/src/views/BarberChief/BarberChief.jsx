@@ -867,14 +867,14 @@ export default function BarberChief({
               className={`chief-header ${isProfile ? "chief-header--profile" : ""} ${isProfileAvailability ? "chief-header--subview" : ""}`}
             >
               {renderHeaderContent()}
-              {/* DEBUG: mostrar botão sempre para testes visuais */}
+              {/* Floating create: only in Chief screen — opens Manual Booking */}
               <button
                 className="chief-create-fixed"
                 type="button"
-                onClick={() => onOpenCreate ? onOpenCreate() : navigate('/barber-create')}
-                aria-label="Criar Barbeiro"
+                onClick={() => onOpenCreate ? onOpenCreate() : navigate('/barber-manual')}
+                aria-label="Criar Agendamento"
               >
-                <FiUserPlus size={18} />
+                <FiPlus size={18} />
               </button>
             </header>
 
