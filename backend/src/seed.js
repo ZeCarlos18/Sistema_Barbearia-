@@ -68,8 +68,8 @@ async function seedDatabase() {
       
       if (existing.length === 0) {
         await connection.query(
-          'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, "barber", NOW(), NOW())',
-          [barber.name, barber.email, passwordHash, barber.phone]
+          'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+          [barber.name, barber.email, passwordHash, barber.phone, 'barber']
         );
         barbersInserted++;
       }
@@ -93,8 +93,8 @@ async function seedDatabase() {
       
       if (existing.length === 0) {
         await connection.query(
-          'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, "client", NOW(), NOW())',
-          [client.name, client.email, passwordHash, client.phone]
+          'INSERT INTO users (name, email, password, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+          [client.name, client.email, passwordHash, client.phone, 'client']
         );
         clientsInserted++;
       }
