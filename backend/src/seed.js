@@ -1,6 +1,7 @@
 const mysql = require('mysql2/promise');
 const bcryptjs = require('bcryptjs');
 require('dotenv').config();
+const { buildMysqlConfig } = require('./utils/mysqlConfig');
 
 /**
  * Script para popular o banco de dados com dados de teste e configuração
@@ -14,13 +15,9 @@ async function seedDatabase() {
       throw new Error('DB_USER e DB_PASSWORD devem ser definidos no ambiente');
     }
 
-    const connection = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 3306,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME || 'barbearia_db'
-    });
+    const connection = await mysql.createConnection(
+      buildMysqlConfig({ database: process.env.DB_NAME || 'barbearia_db' })
+    );
 
     console.log('✅ Conectado ao banco de dados\n');
 

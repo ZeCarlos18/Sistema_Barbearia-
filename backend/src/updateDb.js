@@ -1,6 +1,7 @@
 // backend/src/updateDb.js
 const mysql = require('mysql2/promise');
 require('dotenv').config();
+const { buildMysqlConfig } = require('./utils/mysqlConfig');
 
 async function updateDatabase() {
   console.log('🔧 Iniciando a atualização do banco de dados...');
@@ -11,13 +12,9 @@ async function updateDatabase() {
     }
 
     // Conectar ao banco usando as credenciais do .env
-    const connection = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 3306,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME || 'barbearia_db'
-    });
+    const connection = await mysql.createConnection(
+      buildMysqlConfig({ database: process.env.DB_NAME || 'barbearia_db' })
+    );
 
     console.log('✅ Conectado ao MySQL!');
 

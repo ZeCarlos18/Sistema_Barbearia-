@@ -2,6 +2,7 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 const bcryptjs = require('bcryptjs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+const { buildMysqlConfig } = require('./utils/mysqlConfig');
 
 async function ensureAdmin() {
   const name = process.argv[2] || 'Barbeiro Chefe';
@@ -25,12 +26,7 @@ async function ensureAdmin() {
     process.exit(1);
   }
 
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || ''
-  });
+  const connection = await mysql.createConnection(buildMysqlConfig());
 
   await connection.query(`CREATE DATABASE IF NOT EXISTS ${dbName}`);
   await connection.query(`USE ${dbName}`);
