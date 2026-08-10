@@ -2,7 +2,6 @@ import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
     FiBell,
-    FiChevronDown,
     FiChevronLeft,
     FiChevronRight,
     FiCheck,
@@ -99,7 +98,6 @@ export default function DashboardBarbeiro() {
         success: "",
     });
     const [loadingBarbers, setLoadingBarbers] = React.useState(true);
-    const [loadingDetails, setLoadingDetails] = React.useState(false);
     const [loadError, setLoadError] = React.useState("");
 
     const [agendaDate, setAgendaDate] = React.useState(getTodayStr);
@@ -172,7 +170,6 @@ export default function DashboardBarbeiro() {
 
         async function loadDetails() {
             if (!selectedBarberId) return;
-            setLoadingDetails(true);
             try {
                 const details = await fetchBarberDetails(selectedBarberId);
                 if (!isMounted) return;
@@ -240,8 +237,6 @@ export default function DashboardBarbeiro() {
                 if (!isMounted) return;
                 setLoadError(error.message || "Erro ao carregar detalhes");
                 setSelectedBarberDetails(getDisplayDetails(selectedBarberId));
-            } finally {
-                setLoadingDetails(false);
             }
         }
 
@@ -262,10 +257,6 @@ export default function DashboardBarbeiro() {
         revenue: 0,
         completed: 0,
     };
-    const chartData =
-        selectedBarberDetails?.chartData ||
-        getDisplayDetails(selectedBarberId || 2).chartData;
-    const chartTitle = selectedBarberDetails?.chartTitle || "Cortes Realizados";
     const chartDataCuts =
         selectedBarberDetails?.chartDataCuts ||
         getDisplayDetails(selectedBarberId || 2).chartData;

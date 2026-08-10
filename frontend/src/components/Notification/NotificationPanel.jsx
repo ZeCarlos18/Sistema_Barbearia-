@@ -4,7 +4,6 @@ import { getMyWaitlist, acceptWaitlistEntry, refuseWaitlistEntry } from '../../s
 import './NotificationPanel.css';
 import {
   FiClock,
-  FiCalendar,
   FiBell,
   FiTrash2
 } from 'react-icons/fi';

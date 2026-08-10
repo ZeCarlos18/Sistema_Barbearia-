@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { getActiveNavItem } from "../../utils/navHelper";
 import PrimaryButton from "../../components/PrimaryButton";
 import BottomNav from "../../components/BottomNav/BottomNav";

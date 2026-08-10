@@ -33,12 +33,9 @@ export default function ManualBooking({ onBack, onCreated }) {
   const [availableTimes, setAvailableTimes] = React.useState([]);
   const [selectedTime, setSelectedTime] = React.useState('');
   const [clientName, setClientName] = React.useState('');
-  const [clientPhone, setClientPhone] = React.useState('');
   const [loadingTimes, setLoadingTimes] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState(null);
-
-  const selectedBarberObj = React.useMemo(() => (barbers || []).find(b => String(b.id) === String(selectedBarber)), [barbers, selectedBarber]);
 
   React.useEffect(() => {
     async function load() {
@@ -56,7 +53,7 @@ export default function ManualBooking({ onBack, onCreated }) {
       }
     }
     load();
-  }, []);
+  }, [isChief, selectedBarber]);
 
   // If user is a barber and barbers list is empty, show the current user as barber option
   React.useEffect(() => {
@@ -64,7 +61,7 @@ export default function ManualBooking({ onBack, onCreated }) {
       setBarbers([{ id: user.id, name: user.name, avatar: user.avatar || '' }]);
       setSelectedBarber(user.id);
     }
-  }, [user, isChief]);
+  }, [user, isChief, barbers]);
 
   React.useEffect(() => {
     async function loadTimes() {
@@ -90,7 +87,6 @@ export default function ManualBooking({ onBack, onCreated }) {
     try {
       setSubmitting(true);
       const body = { serviceId, date, time: selectedTime, barberId: selectedBarber, clientName };
-      if (clientPhone && String(clientPhone).trim().length > 0) body.clientPhone = clientPhone;
       const payload = await createManualBooking(body);
       alert(payload.message || 'Agendamento criado com sucesso');
       onCreated?.();

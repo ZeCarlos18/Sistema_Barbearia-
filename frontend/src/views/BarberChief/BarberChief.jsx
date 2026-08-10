@@ -400,7 +400,7 @@ export default function BarberChief({
     );
   }
 
-  function isUnavailable(dateStr, timeStr = null) {
+  const isUnavailable = React.useCallback((dateStr, timeStr = null) => {
     return availabilityUnavailabilities.some((unav) => {
       const startDate = normalizeDateValue(unav.start_date || unav.startDate);
       const endDate = normalizeDateValue(unav.end_date || unav.endDate);
@@ -422,11 +422,9 @@ export default function BarberChief({
         )
       );
     });
-  }
+  }, [availabilityUnavailabilities]);
 
-  const isDayUnavailable = (dateStr) => isUnavailable(dateStr);
-  const isSlotUnavailable = (dateStr, timeStr) =>
-    isUnavailable(dateStr, timeStr);
+  const isDayUnavailable = React.useCallback((dateStr) => isUnavailable(dateStr), [isUnavailable]);
 
   const availabilitySlots = React.useMemo(() => {
     const times = buildTimeSlots();
@@ -439,7 +437,7 @@ export default function BarberChief({
 
     return times.map((time) => {
       const appointment = appointmentsByTime.get(time) || null;
-      const unavailable = isSlotUnavailable(availabilityDate, time);
+      const unavailable = isUnavailable(availabilityDate, time);
       const status = appointment
         ? "booked"
         : unavailable
@@ -455,8 +453,7 @@ export default function BarberChief({
   }, [
     availabilityAppointments,
     availabilityDate,
-    availabilityUnavailabilities,
-    isSlotUnavailable,
+    isUnavailable,
   ]);
 
   function handleSlotSelect(slot) {
