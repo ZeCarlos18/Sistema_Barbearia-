@@ -61,7 +61,7 @@ class Notification {
     
     try {
       const [rows] = await connection.query(
-        'SELECT * FROM notifications WHERE user_id = ? AND status = "unread" ORDER BY created_at DESC',
+        "SELECT * FROM notifications WHERE user_id = ? AND status = 'unread' ORDER BY created_at DESC",
         [userId]
       );
       return rows;
@@ -75,7 +75,7 @@ class Notification {
     
     try {
       await connection.query(
-        'UPDATE notifications SET status = "read", updated_at = NOW() WHERE id = ?',
+        "UPDATE notifications SET status = 'read', updated_at = NOW() WHERE id = ?",
         [id]
       );
       return true;
