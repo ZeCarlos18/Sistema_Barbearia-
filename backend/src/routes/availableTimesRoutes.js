@@ -3,6 +3,14 @@ const router = express.Router();
 const Appointment = require('../models/Appointment');
 const Unavailability = require('../models/Unavailability');
 
+const normalizeTimeValue = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return value.substring(0, 5);
+  const hours = String(value.getHours()).padStart(2, '0');
+  const minutes = String(value.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
 /**
  * GET /api/available-times?barberId=1&date=2026-05-01
  * Retorna apenas os horários disponíveis para um barbeiro em uma data específica
@@ -49,8 +57,9 @@ router.get('/', async (req, res) => {
       // Para cada indisponibilidade com horários, marcar slots entre start_time e end_time como indisponíveis
       for (const u of activeUnavs) {
         if (u.start_time && u.end_time) {
-          const start = u.start_time.substring(0,5);
-          const end = u.end_time.substring(0,5);
+          const start = normalizeTimeValue(u.start_time);
+          const end = normalizeTimeValue(u.end_time);
+          if (!start || !end) continue;
           // build times between start and end inclusive
           const [sh, sm] = start.split(':').map(Number);
           const [eh, em] = end.split(':').map(Number);
