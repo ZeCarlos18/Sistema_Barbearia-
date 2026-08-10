@@ -1,4 +1,5 @@
 const pool = require('../database');
+const Service = require('./Service');
 
 class Appointment {
   /**
@@ -12,13 +13,18 @@ class Appointment {
     const connection = await pool.getConnection();
     
     try {
-      // Note: some older DB schemas may not have a dedicated `price` column
-      // in `appointments`. We'll avoid inserting into a non-existent column
-      // and instead store the appointment referencing the service. The
-      // service price can be retrieved when needed via JOIN with `services`.
+      let price = providedPrice;
+      if (price === undefined || price === null) {
+        const service = await Service.findById(serviceId);
+        if (!service) {
+          throw new Error('Serviço não encontrado.');
+        }
+        price = service.price;
+      }
+
       const [result] = await connection.query(
-        "INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'confirmed', NOW(), NOW())",
-        [userId, barberId, serviceId, date, time]
+        "INSERT INTO appointments (user_id, barber_id, service_id, price, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'confirmed', NOW(), NOW())",
+        [userId, barberId, serviceId, price, date, time]
       );
       
       return {
@@ -26,6 +32,7 @@ class Appointment {
         userId,
         barberId,
         serviceId,
+        price,
         date,
         time,
         status: 'confirmed',
