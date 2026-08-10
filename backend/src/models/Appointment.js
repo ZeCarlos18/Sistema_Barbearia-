@@ -17,7 +17,7 @@ class Appointment {
       // and instead store the appointment referencing the service. The
       // service price can be retrieved when needed via JOIN with `services`.
       const [result] = await connection.query(
-        'INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, "confirmed", NOW(), NOW())',
+        "INSERT INTO appointments (user_id, barber_id, service_id, date, time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'confirmed', NOW(), NOW())",
         [userId, barberId, serviceId, date, time]
       );
       
@@ -173,7 +173,7 @@ class Appointment {
     
     try {
       const [rows] = await connection.query(
-        'SELECT time FROM appointments WHERE barber_id = ? AND date = ? AND status IN ("confirmed", "completed")',
+        "SELECT time FROM appointments WHERE barber_id = ? AND date = ? AND status IN ('confirmed', 'completed')",
         [barberId, date]
       );
       
@@ -188,6 +188,12 @@ class Appointment {
         const minutes = String(time.getMinutes()).padStart(2, '0');
         return `${hours}:${minutes}`;
       });
+    } catch (error) {
+      if (error.code === 'ER_NO_SUCH_TABLE' || error.code === 'ER_BAD_TABLE_ERROR') {
+        return [];
+      }
+
+      throw error;
     } finally {
       connection.release();
     }

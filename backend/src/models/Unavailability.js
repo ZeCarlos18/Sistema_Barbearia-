@@ -146,6 +146,12 @@ class Unavailability {
 
       const [rows] = await connection.query(query, params);
       return rows;
+    } catch (error) {
+      if (error.code === 'ER_NO_SUCH_TABLE' || error.code === 'ER_BAD_TABLE_ERROR') {
+        return [];
+      }
+
+      throw error;
     } finally {
       connection.release();
     }
