@@ -13,6 +13,13 @@ class BarberAvailabilityController {
         });
       }
 
+      if (req.userRole !== 'admin' && String(req.userId) !== String(barberId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Barbeiro só pode alterar sua própria disponibilidade'
+        });
+      }
+
       await BarberAvailability.setSchedule(barberId, {
         availableDays,
         startTime,

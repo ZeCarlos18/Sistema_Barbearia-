@@ -123,10 +123,27 @@ DB_NAME=barbearia_db
 NODE_ENV=development
 PORT=3001
 JWT_SECRET=your-secret-key
-RECOVERY_JWT_SECRET=your-recovery-secret-key
+
+# URL do frontend - usada para montar o link do e-mail de recuperação de senha
+FRONTEND_URL=http://localhost:3000
+
+# SMTP para envio de e-mail (exemplo com Gmail)
+# SMTP_PASS deve ser uma "Senha de app" do Google, nunca a senha da conta
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=seuemail@gmail.com
+SMTP_PASS=senha_de_app_de_16_digitos
+MAIL_FROM_NAME=Barbearia
+MAIL_FROM_ADDRESS=seuemail@gmail.com
+RESET_TOKEN_EXPIRES_MINUTES=30
 ```
 
 **Nota**: Se seu MySQL tem senha, adicione em `DB_PASSWORD`
+
+**Recuperação de senha**: o usuário pede o link em `/recover`, recebe um e-mail com um
+link para `/reset-password?token=...` e define a nova senha. O token fica salvo em hash
+(SHA-256) na tabela `password_resets`, expira em 30 minutos e é de uso único.
 
 ---
 

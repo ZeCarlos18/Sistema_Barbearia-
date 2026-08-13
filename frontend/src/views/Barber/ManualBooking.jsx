@@ -69,7 +69,7 @@ export default function ManualBooking({ onBack, onCreated }) {
       setLoadingTimes(true);
       try {
         const resp = await getManualAvailableTimes(selectedBarber, date);
-        setAvailableTimes(resp.availableTimes || resp.availableTimes || []);
+        setAvailableTimes(resp.availableTimes || []);
       } catch (err) {
         console.error('Erro ao buscar horários:', err);
         setAvailableTimes([]);

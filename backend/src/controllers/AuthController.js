@@ -1,20 +1,28 @@
 const User = require('../models/User');
+const PasswordReset = require('../models/PasswordReset');
+const EmailService = require('../services/EmailService');
 const jwt = require('jsonwebtoken');
 const { handleError } = require('../utils/errorHandler');
 
-const RECOVERY_TOKEN_EXPIRES_IN = '15m';
+// Validade do link enviado por e-mail (em minutos)
+const RESET_TOKEN_EXPIRES_IN_MINUTES = Number(process.env.RESET_TOKEN_EXPIRES_MINUTES || 30);
 
-function getRecoverySecret() {
-  if (process.env.RECOVERY_JWT_SECRET) {
-    return process.env.RECOVERY_JWT_SECRET;
-  }
+// Intervalo mínimo entre dois pedidos de link do mesmo usuário (em segundos)
+const RESET_REQUEST_COOLDOWN_SECONDS = 60;
 
-  if (process.env.JWT_SECRET) {
-    console.warn('[AuthController] RECOVERY_JWT_SECRET não configurado. Usando JWT_SECRET como fallback temporário.');
-    return process.env.JWT_SECRET;
-  }
+// Resposta única do "esqueci minha senha": nunca revelamos se o e-mail existe,
+// para que ninguém consiga descobrir quais e-mails estão cadastrados no sistema.
+const GENERIC_RECOVERY_MESSAGE =
+  'Se este e-mail estiver cadastrado, enviamos um link de recuperação. Verifique sua caixa de entrada e o spam.';
 
-  return null;
+/**
+ * Monta a URL do formulário de nova senha no frontend
+ * @param {String} token - Token de recuperação em texto puro
+ * @returns {String} URL completa
+ */
+function buildResetUrl(token) {
+  const baseUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  return `${baseUrl}/reset-password?token=${token}`;
 }
 
 /**
@@ -234,72 +242,117 @@ static async register(req, res) {
   }
 
   /**
-   * Verifica se o e-mail existe para iniciar o fluxo de recuperação
+   * Solicitar recuperação de senha: envia um link por e-mail
+   * POST /api/auth/forgot-password
+   *
+   * A resposta é sempre a mesma (200 + mensagem genérica), exista o e-mail ou não.
+   * Isso impede que alguém use esta rota para descobrir quem tem conta no sistema.
    */
-  static async checkRecoverEmail(req, res) {
+  static async forgotPassword(req, res) {
     try {
       const normalizedEmail = String(req.body.email || '').toLowerCase().trim();
 
       if (!normalizedEmail) {
         return res.status(400).json({
           success: false,
-          message: 'Email é obrigatório'
+          message: 'E-mail é obrigatório'
         });
       }
 
       const user = await User.findByEmail(normalizedEmail);
+
+      // E-mail não cadastrado: responde igual ao caso de sucesso, sem enviar nada.
       if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'E-mail não encontrado no sistema'
+        return res.status(200).json({
+          success: true,
+          message: GENERIC_RECOVERY_MESSAGE
         });
       }
 
-      const recoverySecret = getRecoverySecret();
-      if (!recoverySecret) {
-        return res.status(500).json({
-          success: false,
-          message: 'RECOVERY_JWT_SECRET não configurado no ambiente'
-        });
-      }
-
-      const recoveryToken = jwt.sign(
-        {
-          purpose: 'password_recovery',
-          email: user.email,
-          userId: user.id
-        },
-        recoverySecret,
-        {
-          expiresIn: RECOVERY_TOKEN_EXPIRES_IN
-        }
+      // Evita disparo em massa de e-mails para o mesmo usuário.
+      const recentRequests = await PasswordReset.countRecentRequests(
+        user.id,
+        RESET_REQUEST_COOLDOWN_SECONDS
       );
+
+      if (recentRequests > 0) {
+        console.warn(`[AuthController] Pedido de recuperação ignorado (cooldown) para o usuário ${user.id}`);
+        return res.status(200).json({
+          success: true,
+          message: GENERIC_RECOVERY_MESSAGE
+        });
+      }
+
+      const token = await PasswordReset.create(user.id, RESET_TOKEN_EXPIRES_IN_MINUTES);
+      const resetUrl = buildResetUrl(token);
+
+      try {
+        await EmailService.sendPasswordResetEmail({
+          to: user.email,
+          name: user.name,
+          resetUrl,
+          expiresInMinutes: RESET_TOKEN_EXPIRES_IN_MINUTES
+        });
+      } catch (emailError) {
+        // O e-mail falhou, mas não expomos isso ao cliente (evita enumeração de contas).
+        console.error('[AuthController] Falha ao enviar e-mail de recuperação:', emailError);
+      }
 
       return res.status(200).json({
         success: true,
-        message: 'E-mail encontrado. Você já pode redefinir a senha.',
-        recoveryToken,
-        expiresIn: RECOVERY_TOKEN_EXPIRES_IN,
-        redirectUrl: '/reset-password'
+        message: GENERIC_RECOVERY_MESSAGE
       });
     } catch (error) {
-      handleError(res, error, 'Erro ao verificar e-mail de recuperação:', 'AuthController');
+      handleError(res, error, 'Erro ao solicitar recuperação de senha:', 'AuthController');
     }
   }
 
   /**
-   * Redefine senha por e-mail no fluxo de recuperação
+   * Validar o token do link antes de mostrar o formulário de nova senha
+   * GET /api/auth/reset-password/:token
    */
-  static async resetPasswordByEmail(req, res) {
+  static async validateResetToken(req, res) {
     try {
-      const normalizedEmail = String(req.body.email || '').toLowerCase().trim();
-      const { recoveryToken } = req.body;
-      const { newPassword, confirmPassword } = req.body;
+      const { token } = req.params;
 
-      if (!recoveryToken || !newPassword || !confirmPassword) {
+      if (!token) {
         return res.status(400).json({
           success: false,
-          message: 'Sessão de recuperação, nova senha e confirmação são obrigatórias'
+          message: 'Token de recuperação é obrigatório'
+        });
+      }
+
+      const resetRequest = await PasswordReset.findValidByToken(token);
+
+      if (!resetRequest) {
+        return res.status(400).json({
+          success: false,
+          message: 'Link de recuperação inválido ou expirado. Solicite um novo.'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Link válido',
+        email: resetRequest.email
+      });
+    } catch (error) {
+      handleError(res, error, 'Erro ao validar token de recuperação:', 'AuthController');
+    }
+  }
+
+  /**
+   * Redefinir a senha usando o token recebido por e-mail
+   * POST /api/auth/reset-password
+   */
+  static async resetPassword(req, res) {
+    try {
+      const { token, newPassword, confirmPassword } = req.body;
+
+      if (!token || !newPassword || !confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token, nova senha e confirmação são obrigatórios'
         });
       }
 
@@ -318,48 +371,26 @@ static async register(req, res) {
         });
       }
 
-      const recoverySecret = getRecoverySecret();
-      if (!recoverySecret) {
-        return res.status(500).json({
-          success: false,
-          message: 'RECOVERY_JWT_SECRET não configurado no ambiente'
-        });
-      }
+      const resetRequest = await PasswordReset.findValidByToken(token);
 
-      let decodedRecoveryToken;
-      try {
-        decodedRecoveryToken = jwt.verify(recoveryToken, recoverySecret);
-      } catch (tokenError) {
-        return res.status(401).json({
-          success: false,
-          message: 'Sessão de recuperação inválida ou expirada'
-        });
-      }
-
-      if (decodedRecoveryToken?.purpose !== 'password_recovery' || !decodedRecoveryToken?.email) {
-        return res.status(401).json({
-          success: false,
-          message: 'Sessão de recuperação inválida'
-        });
-      }
-
-      const tokenEmail = String(decodedRecoveryToken.email).toLowerCase().trim();
-      if (normalizedEmail && normalizedEmail !== tokenEmail) {
+      if (!resetRequest) {
         return res.status(400).json({
           success: false,
-          message: 'O e-mail informado não corresponde à sessão de recuperação'
+          message: 'Link de recuperação inválido ou expirado. Solicite um novo.'
         });
       }
 
-      const user = await User.findByEmail(tokenEmail);
-      if (!user) {
-        return res.status(404).json({
+      // Consome o token ANTES de trocar a senha: se duas requisições chegarem juntas,
+      // apenas a primeira consegue marcar o token como usado.
+      const consumed = await PasswordReset.markAsUsed(resetRequest.id);
+      if (!consumed) {
+        return res.status(400).json({
           success: false,
-          message: 'E-mail não encontrado no sistema'
+          message: 'Link de recuperação inválido ou expirado. Solicite um novo.'
         });
       }
 
-      const updated = await User.updatePasswordByEmail(tokenEmail, newPassword);
+      const updated = await User.updatePasswordByEmail(resetRequest.email, newPassword);
       if (!updated) {
         return res.status(500).json({
           success: false,

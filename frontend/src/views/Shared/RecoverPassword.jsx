@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { getActiveNavItem } from '../../utils/navHelper';
 import TextField from '../../components/form/TextField';
 import BottomNav from '../../components/BottomNav/BottomNav';
-import { checkRecoverEmail } from '../../services/authService';
+import { requestPasswordReset } from '../../services/authService';
 import '../../styles/Shared/RecoverPassword.css';
 
 export default function RecoverPassword({ onBackToLogin }) {
@@ -13,8 +13,9 @@ export default function RecoverPassword({ onBackToLogin }) {
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [sent, setSent] = React.useState(false);
 
-  async function handleVerifyEmail(event) {
+  async function handleRequestReset(event) {
     event.preventDefault();
     setError('');
     setMessage('');
@@ -33,24 +34,16 @@ export default function RecoverPassword({ onBackToLogin }) {
     try {
       setLoading(true);
       const normalizedEmail = email.trim().toLowerCase();
-      const response = await checkRecoverEmail(normalizedEmail);
+      const response = await requestPasswordReset(normalizedEmail);
 
-      if (!response?.recoveryToken) {
-        setError('Não foi possível iniciar a recuperação de senha.');
-        return;
-      }
-
-      sessionStorage.setItem('passwordRecoveryToken', response.recoveryToken);
-      sessionStorage.setItem('passwordRecoveryEmail', normalizedEmail);
-
-      navigate('/reset-password', {
-        state: {
-          email: normalizedEmail,
-          recoveryToken: response.recoveryToken
-        }
-      });
+      // Por segurança, a API responde a mesma coisa exista o e-mail ou não.
+      setSent(true);
+      setMessage(
+        response?.message ||
+          'Se este e-mail estiver cadastrado, enviamos um link de recuperação. Verifique sua caixa de entrada e o spam.'
+      );
     } catch (requestError) {
-      setError(requestError.message || 'Não foi possível verificar este e-mail.');
+      setError(requestError.message || 'Não foi possível enviar o e-mail de recuperação.');
     } finally {
       setLoading(false);
     }
@@ -61,10 +54,12 @@ export default function RecoverPassword({ onBackToLogin }) {
       <section className="recover-card">
         <h1 className="recover-title">Recuperar senha</h1>
         <p className="recover-text">
-          Digite seu e-mail para verificar se ele está cadastrado.
+          {sent
+            ? 'Enviamos as instruções para o seu e-mail. O link é válido por 30 minutos.'
+            : 'Digite seu e-mail e enviaremos um link para você criar uma nova senha.'}
         </p>
 
-        <form onSubmit={handleVerifyEmail} className="recover-form">
+        <form onSubmit={handleRequestReset} className="recover-form">
           <TextField
             label="E-mail"
             name="email"
@@ -79,7 +74,7 @@ export default function RecoverPassword({ onBackToLogin }) {
           {message ? <div className="recover-message recover-message--success">{message}</div> : null}
 
           <button type="submit" className="recover-submit" disabled={loading}>
-            {loading ? 'Verificando...' : 'Recuperar senha'}
+            {loading ? 'Enviando...' : sent ? 'Reenviar link' : 'Enviar link de recuperação'}
           </button>
 
           <button type="button" className="recover-back" onClick={onBackToLogin}>
@@ -88,7 +83,7 @@ export default function RecoverPassword({ onBackToLogin }) {
         </form>
       </section>
 
-      <BottomNav 
+      <BottomNav
         active={getActiveNavItem(location.pathname)}
         onNavigate={(page) => {
           if (page === 'home') onBackToLogin();

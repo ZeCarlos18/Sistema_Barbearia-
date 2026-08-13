@@ -31,15 +31,32 @@ export async function logout() {
   }
 }
 
-export function checkRecoverEmail(email) {
-  return apiFetch('/api/auth/recover/check-email', {
+/**
+ * Solicita o envio do link de recuperação para o e-mail informado.
+ * A API sempre responde com sucesso, exista o e-mail ou não.
+ */
+export function requestPasswordReset(email) {
+  return apiFetch('/api/auth/forgot-password', {
     method: 'POST',
     body: JSON.stringify({ email })
   });
 }
 
-export function resetPasswordByEmail(payload) {
-  return apiFetch('/api/auth/recover/reset', {
+/**
+ * Verifica se o token vindo do link do e-mail ainda é válido.
+ */
+export function validateResetToken(token) {
+  return apiFetch(`/api/auth/reset-password/${encodeURIComponent(token)}`, {
+    method: 'GET'
+  });
+}
+
+/**
+ * Define a nova senha usando o token recebido por e-mail.
+ * @param {Object} payload - {token, newPassword, confirmPassword}
+ */
+export function resetPassword(payload) {
+  return apiFetch('/api/auth/reset-password', {
     method: 'POST',
     body: JSON.stringify(payload)
   });

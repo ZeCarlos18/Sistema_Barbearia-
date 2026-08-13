@@ -42,6 +42,20 @@ class Notification {
     }
   }
 
+  static async findById(id) {
+    const connection = await pool.getConnection();
+
+    try {
+      const [rows] = await connection.query(
+        'SELECT * FROM notifications WHERE id = ?',
+        [id]
+      );
+      return rows.length > 0 ? rows[0] : null;
+    } finally {
+      connection.release();
+    }
+  }
+
   static async findByAppointmentIdAndType(relatedAppointmentId, type) {
     const connection = await pool.getConnection();
 

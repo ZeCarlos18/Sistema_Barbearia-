@@ -6,30 +6,9 @@ const User = require('../models/User');
 const BarberAvailability = require('../models/BarberAvailability');
 const Unavailability = require('../models/Unavailability');
 const { handleError } = require('../utils/errorHandler')
-
-// Função auxiliar para gerar a grade de horários da barbearia
-const generateTimeSlots = () => {
-  const slots = [];
-  for (let hour = 9; hour < 19; hour++) {
-    slots.push(`${hour.toString().padStart(2, '0')}:00`);
-    slots.push(`${hour.toString().padStart(2, '0')}:30`);
-  }
-  return slots;
-};
+const { normalizeTimeValue, generateTimeSlots, buildUnavailabilityBlocks } = require('../utils/scheduleHelper');
 
 // ---- Auxiliares para o Registro Manual de Agendamento (RF26) ----
-
-/**
- * Normaliza um valor de horário vindo do MySQL (string "HH:MM:SS" ou objeto Date/TIME)
- * para o formato "HH:MM".
- */
-const normalizeTimeValue = (value) => {
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'string') return value.substring(0, 5);
-  const hours = String(value.getHours()).padStart(2, '0');
-  const minutes = String(value.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-};
 
 /**
  * Faz o parse da coluna users.available_days (armazenada como JSON string, ex: "[1,2,3,4,5]")
@@ -78,43 +57,18 @@ const validateBarberWorkingHours = (schedule, date, time) => {
   return { ok: true };
 };
 
-/**
- * Constrói a lista de horários bloqueados por indisponibilidades ativas (RF12) de um barbeiro
- * em uma data específica. Retorna { fullDayBlocked, blockedTimes }.
- */
-const buildUnavailabilityBlocks = (activeUnavailabilities) => {
-  const fullDayBlocked = activeUnavailabilities.some(
-    (u) => u.start_time === null && u.end_time === null
-  );
-
-  const blockedTimes = [];
-  if (!fullDayBlocked) {
-    for (const u of activeUnavailabilities) {
-      if (u.start_time && u.end_time) {
-        const start = normalizeTimeValue(u.start_time);
-        const end = normalizeTimeValue(u.end_time);
-        let [curH, curM] = start.split(':').map(Number);
-        const [endH, endM] = end.split(':').map(Number);
-        while (curH < 24) {
-          blockedTimes.push(`${String(curH).padStart(2, '0')}:${String(curM).padStart(2, '0')}`);
-          if (curH === endH && curM === endM) break;
-          curM += 30;
-          if (curM >= 60) { curM = 0; curH += 1; }
-        }
-      }
-    }
-  }
-
-  return { fullDayBlocked, blockedTimes };
-};
-
 class AppointmentController {
 /**
    * Criar novo agendamento
    */
   static async create(req, res) {
     try {
-      const { userId, barberId, serviceId, date, time } = req.body;
+      if (!req.userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+
+      // O userId sempre vem do token autenticado, nunca do corpo da requisição:
+      // isso impede que alguém crie agendamentos em nome de outro usuário.
+      const userId = req.userId;
+      const { barberId, serviceId, date, time } = req.body;
 
       if (!userId || !barberId || !serviceId || !date || !time) {
         return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios' });
@@ -174,8 +128,18 @@ class AppointmentController {
 
   static async findById(req, res) {
     try {
+      if (!req.userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+
       const appointment = await Appointment.findById(req.params.id);
       if (!appointment) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
+
+      const isOwner = String(appointment.user_id) === String(req.userId);
+      const isAssignedBarber = req.userRole === 'barber' && String(appointment.barber_id) === String(req.userId);
+      const isAdmin = req.userRole === 'admin';
+      if (!isOwner && !isAssignedBarber && !isAdmin) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
       res.json({ success: true, data: appointment });
     } catch (error) {
       handleError(res, error, 'Erro ao buscar agendamento');
@@ -204,6 +168,14 @@ class AppointmentController {
 
   static async findByBarber(req, res) {
     try {
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (req.userRole !== 'admin' && req.userRole !== 'barber') {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+      if (req.userRole === 'barber' && String(req.userId) !== String(req.params.barberId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode visualizar sua própria agenda' });
+      }
+
       const appointments = await Appointment.findByBarberId(req.params.barberId);
       res.json({ success: true, data: appointments });
     } catch (error) {
@@ -232,6 +204,11 @@ class AppointmentController {
 
   static async findByDate(req, res) {
     try {
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (!['admin', 'barber'].includes(req.userRole)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
       const appointments = await Appointment.findByDate(req.params.date);
       res.json({ success: true, data: appointments });
     } catch (error) {
@@ -241,6 +218,11 @@ class AppointmentController {
 
   static async updateStatus(req, res) {
     try {
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (!['admin', 'barber'].includes(req.userRole)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
       const { id } = req.params;
       const { status } = req.body;
 
@@ -249,9 +231,13 @@ class AppointmentController {
         return res.status(400).json({ success: false, message: 'Status inválido.' });
       }
 
-      const appointment = await Appointment.updateStatus(id, status);
-      if (!appointment) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
+      const existing = await Appointment.findById(id);
+      if (!existing) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
+      if (req.userRole === 'barber' && String(existing.barber_id) !== String(req.userId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode alterar agendamentos da própria agenda' });
+      }
 
+      const appointment = await Appointment.updateStatus(id, status);
       res.json({ success: true, data: appointment });
     } catch (error) {
       handleError(res, error, 'Erro ao atualizar status');
@@ -260,9 +246,19 @@ class AppointmentController {
 
   static async confirm(req, res) {
     try {
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+      if (!['admin', 'barber'].includes(req.userRole)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
       const { id } = req.params;
+      const existing = await Appointment.findById(id);
+      if (!existing) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
+      if (req.userRole === 'barber' && String(existing.barber_id) !== String(req.userId)) {
+        return res.status(403).json({ success: false, message: 'Barbeiro só pode confirmar agendamentos da própria agenda' });
+      }
+
       const appointment = await Appointment.updateStatus(id, 'confirmed');
-      if (!appointment) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
       res.json({ success: true, data: appointment });
     } catch (error) {
       handleError(res, error, 'Erro ao confirmar agendamento');
@@ -271,9 +267,18 @@ class AppointmentController {
 
   static async cancel(req, res) {
     try {
+      if (!req.userId || !req.userRole) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+
       const { id } = req.params;
       const appointment = await Appointment.findById(id);
       if (!appointment) return res.status(404).json({ success: false, message: 'Agendamento não encontrado' });
+
+      const isOwner = String(appointment.user_id) === String(req.userId);
+      const isAssignedBarber = req.userRole === 'barber' && String(appointment.barber_id) === String(req.userId);
+      const isAdmin = req.userRole === 'admin';
+      if (!isOwner && !isAssignedBarber && !isAdmin) {
+        return res.status(403).json({ success: false, message: 'Você só pode cancelar seus próprios agendamentos' });
+      }
 
       if (appointment.status !== 'confirmed' && appointment.status !== 'pending') {
         return res.status(409).json({ success: false, message: 'Este agendamento não pode ser cancelado.' });

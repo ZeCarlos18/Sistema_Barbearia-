@@ -73,7 +73,18 @@ class AdminController {
         return res.status(409).json({ success: false, message: 'Este telefone já está registado no sistema.' });
       }
 
-      // 7. Criar senha temporária se não for enviada
+      // 7. Se uma senha manual for informada, ela precisa seguir a mesma política das demais
+      if (password && password.trim()) {
+        const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{6,})/;
+        if (!passwordRegex.test(password)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Senha deve ter no mínimo 6 caracteres, uma letra maiúscula e um caractere especial.'
+          });
+        }
+      }
+
+      // Criar senha temporária se não for enviada
       const randomPassword = password && password.trim() ? password : AdminController.generateTemporaryPassword();
 
       // 8. Salvar na Base de Dados

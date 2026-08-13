@@ -1,46 +1,70 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import TextField from '../../components/form/TextField';
 import BottomNav from '../../components/BottomNav/BottomNav';
 import { getActiveNavItem } from '../../utils/navHelper';
-import { resetPasswordByEmail } from '../../services/authService';
+import { resetPassword, validateResetToken } from '../../services/authService';
 import '../../styles/Shared/RecoverPassword.css';
 
 export default function ResetPassword({ onBackToLogin, onGoToRecover }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  // O token chega pela URL do link enviado no e-mail: /reset-password?token=...
+  const token = searchParams.get('token') || '';
+
   const [email, setEmail] = React.useState('');
-  const [recoveryToken, setRecoveryToken] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [validating, setValidating] = React.useState(true);
+  const [tokenValid, setTokenValid] = React.useState(false);
 
+  // Valida o link assim que a página abre, para não deixar o usuário
+  // preencher o formulário inteiro e só então descobrir que o link expirou.
   React.useEffect(() => {
-    const stateEmail = location.state?.email || sessionStorage.getItem('passwordRecoveryEmail') || '';
-    const stateToken = location.state?.recoveryToken || sessionStorage.getItem('passwordRecoveryToken') || '';
+    let active = true;
 
-    setEmail(stateEmail);
-    setRecoveryToken(stateToken);
+    async function checkToken() {
+      if (!token) {
+        if (active) {
+          setError('Link de recuperação inválido. Solicite um novo e-mail de recuperação.');
+          setValidating(false);
+        }
+        return;
+      }
 
-    if (!stateToken) {
-      setError('A sessão de recuperação expirou. Refaça a verificação do e-mail.');
+      try {
+        const response = await validateResetToken(token);
+        if (!active) return;
+
+        setTokenValid(true);
+        setEmail(response?.email || '');
+      } catch (requestError) {
+        if (!active) return;
+        setError(requestError.message || 'Link de recuperação inválido ou expirado. Solicite um novo.');
+      } finally {
+        if (active) setValidating(false);
+      }
     }
-  }, [location.state]);
 
-  function clearRecoverySession() {
-    sessionStorage.removeItem('passwordRecoveryToken');
-    sessionStorage.removeItem('passwordRecoveryEmail');
-  }
+    checkToken();
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
 
   async function handleResetPassword(event) {
     event.preventDefault();
     setError('');
     setMessage('');
 
-    if (!recoveryToken) {
-      setError('A sessão de recuperação expirou. Refaça a verificação do e-mail.');
+    if (!token || !tokenValid) {
+      setError('Link de recuperação inválido ou expirado. Solicite um novo.');
       return;
     }
 
@@ -62,14 +86,8 @@ export default function ResetPassword({ onBackToLogin, onGoToRecover }) {
 
     try {
       setLoading(true);
-      await resetPasswordByEmail({
-        email,
-        recoveryToken,
-        newPassword,
-        confirmPassword
-      });
+      await resetPassword({ token, newPassword, confirmPassword });
 
-      clearRecoverySession();
       navigate('/login', {
         replace: true,
         state: {
@@ -81,6 +99,61 @@ export default function ResetPassword({ onBackToLogin, onGoToRecover }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function goToRecover() {
+    if (typeof onGoToRecover === 'function') {
+      onGoToRecover();
+      return;
+    }
+    if (typeof onBackToLogin === 'function') {
+      onBackToLogin();
+      return;
+    }
+    navigate('/recover');
+  }
+
+  if (validating) {
+    return (
+      <div className="recover-page">
+        <section className="recover-card">
+          <h1 className="recover-title">Definir nova senha</h1>
+          <p className="recover-text">Validando seu link de recuperação...</p>
+        </section>
+      </div>
+    );
+  }
+
+  // Link inválido/expirado: nem mostramos o formulário, só o caminho para pedir outro.
+  if (!tokenValid) {
+    return (
+      <div className="recover-page">
+        <section className="recover-card">
+          <h1 className="recover-title">Link inválido</h1>
+          <p className="recover-text">
+            {error || 'Este link de recuperação não é mais válido.'}
+          </p>
+
+          <div className="recover-form">
+            <button type="button" className="recover-submit" onClick={goToRecover}>
+              Solicitar novo link
+            </button>
+
+            <button type="button" className="recover-back" onClick={() => navigate('/login')}>
+              Voltar para login
+            </button>
+          </div>
+        </section>
+
+        <BottomNav
+          active={getActiveNavItem(location.pathname)}
+          onNavigate={(page) => {
+            if (page === 'home' || page === 'calendar') navigate('/recover');
+            else navigate('/login');
+          }}
+        />
+      </div>
+    );
   }
 
   return (
@@ -128,27 +201,12 @@ export default function ResetPassword({ onBackToLogin, onGoToRecover }) {
           {error ? <div className="recover-message recover-message--error">{error}</div> : null}
           {message ? <div className="recover-message recover-message--success">{message}</div> : null}
 
-          <button type="submit" className="recover-submit" disabled={loading || !recoveryToken}>
+          <button type="submit" className="recover-submit" disabled={loading}>
             {loading ? 'Alterando...' : 'Redefinir senha'}
           </button>
 
-          <button
-            type="button"
-            className="recover-back"
-            onClick={() => {
-              clearRecoverySession();
-              if (typeof onGoToRecover === 'function') {
-                onGoToRecover();
-                return;
-              }
-              if (typeof onBackToLogin === 'function') {
-                onBackToLogin();
-                return;
-              }
-              navigate('/recover');
-            }}
-          >
-            Voltar para recuperação
+          <button type="button" className="recover-back" onClick={() => navigate('/login')}>
+            Voltar para login
           </button>
         </form>
       </section>
@@ -156,16 +214,8 @@ export default function ResetPassword({ onBackToLogin, onGoToRecover }) {
       <BottomNav
         active={getActiveNavItem(location.pathname)}
         onNavigate={(page) => {
-          if (page === 'home' || page === 'calendar') {
-            clearRecoverySession();
-            navigate('/recover');
-            return;
-          }
-
-          if (page === 'dashboard' || page === 'profile') {
-            clearRecoverySession();
-            navigate('/login');
-          }
+          if (page === 'home' || page === 'calendar') navigate('/recover');
+          else navigate('/login');
         }}
       />
     </div>

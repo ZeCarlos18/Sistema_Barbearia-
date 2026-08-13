@@ -23,30 +23,7 @@ import BarberCreate from "./views/BarberChief/BarberCreate";
 import ManualBooking from "./views/Barber/ManualBooking";
 import Appointments from "./views/Client/Appointments";
 import BarberWaitlistPage from "./views/Barber/BarberWaitlistPage";
-
-// Utilitário para buscar usuário e limpar cache
-function getStoredUser() {
-  const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
-  if (!stored) return null;
-
-  try {
-    const user = JSON.parse(stored);
-    const validRoles = ["admin", "barber", "client"];
-    const userRole = user?.role ? String(user.role).toLowerCase() : "";
-
-    if (!validRoles.includes(userRole)) {
-      console.warn("⚠️ Utilizador sem cargo válido. A limpar credenciais...");
-      localStorage.clear();
-      sessionStorage.clear();
-      return null; 
-    }
-
-    user.role = userRole; 
-    return user;
-  } catch (error) {
-    return null;
-  }
-}
+import { getStoredUser } from "./utils/authHelper";
 
 // 🧭 Define a página principal correta com base no cargo do utilizador
 function getDefaultRoute(role) {

@@ -88,22 +88,45 @@ router.get('/profile',
 router.get('/users', authenticate, requireAdmin, AuthController.getAllUsers);
 
 /**
- * Verifica se e-mail existe para recuperação de senha
- * POST /api/auth/recover/check-email
+ * Solicitar link de recuperação de senha por e-mail
+ * POST /api/auth/forgot-password
+ *
+ * Body esperado:
+ * {
+ *   "email": "joao@example.com"
+ * }
+ *
+ * Responde sempre 200 com mensagem genérica, mesmo que o e-mail não exista,
+ * para não permitir descobrir quais e-mails estão cadastrados.
  */
-router.post('/recover/check-email',
+router.post('/forgot-password',
   validateRequiredFields(['email']),
   validateEmail,
-  AuthController.checkRecoverEmail
+  AuthController.forgotPassword
 );
 
 /**
- * Redefinir senha com token de recuperação
- * POST /api/auth/recover/reset
+ * Validar o token do link antes de exibir o formulário de nova senha
+ * GET /api/auth/reset-password/:token
  */
-router.post('/recover/reset',
-  validateRequiredFields(['recoveryToken', 'newPassword', 'confirmPassword']),
-  AuthController.resetPasswordByEmail
+router.get('/reset-password/:token',
+  AuthController.validateResetToken
+);
+
+/**
+ * Redefinir a senha com o token recebido por e-mail
+ * POST /api/auth/reset-password
+ *
+ * Body esperado:
+ * {
+ *   "token": "TOKEN_DO_LINK",
+ *   "newPassword": "NovaSenha!1",
+ *   "confirmPassword": "NovaSenha!1"
+ * }
+ */
+router.post('/reset-password',
+  validateRequiredFields(['token', 'newPassword', 'confirmPassword']),
+  AuthController.resetPassword
 );
 
 module.exports = router;

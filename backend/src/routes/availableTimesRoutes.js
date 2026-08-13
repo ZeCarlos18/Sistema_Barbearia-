@@ -2,14 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Appointment = require('../models/Appointment');
 const Unavailability = require('../models/Unavailability');
-
-const normalizeTimeValue = (value) => {
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'string') return value.substring(0, 5);
-  const hours = String(value.getHours()).padStart(2, '0');
-  const minutes = String(value.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-};
+const { generateTimeSlots, buildUnavailabilityBlocks } = require('../utils/scheduleHelper');
 
 /**
  * GET /api/available-times?barberId=1&date=2026-05-01
@@ -37,11 +30,7 @@ router.get('/', async (req, res) => {
     }
 
     // Horários de funcionamento (9h às 19h, de 30 em 30 minutos)
-    const allTimes = [];
-    for (let hour = 9; hour < 19; hour++) {
-      allTimes.push(`${hour.toString().padStart(2, '0')}:00`);
-      allTimes.push(`${hour.toString().padStart(2, '0')}:30`);
-    }
+    const allTimes = generateTimeSlots();
 
     // Buscar horários ocupados por agendamentos
     const occupiedTimes = await Appointment.getOccupiedTimes(barberId, date);
@@ -49,39 +38,13 @@ router.get('/', async (req, res) => {
     // Buscar indisponibilidades ativas para o barbeiro na data
     const activeUnavs = await Unavailability.findActiveUnavailabilities(barberId, date, null);
 
-    // Se houver indisponibilidade de dia inteiro (start_time NULL AND end_time NULL), não há horários disponíveis
-    const hasFullDayBlock = activeUnavs.some(u => u.start_time === null && u.end_time === null);
-
-    let unavailableTimes = [];
-    if (!hasFullDayBlock) {
-      // Para cada indisponibilidade com horários, marcar slots entre start_time e end_time como indisponíveis
-      for (const u of activeUnavs) {
-        if (u.start_time && u.end_time) {
-          const start = normalizeTimeValue(u.start_time);
-          const end = normalizeTimeValue(u.end_time);
-          if (!start || !end) continue;
-          // build times between start and end inclusive
-          const [sh, sm] = start.split(':').map(Number);
-          const [eh, em] = end.split(':').map(Number);
-          let curH = sh, curM = sm;
-          while (curH < 24) {
-            const curTime = `${String(curH).padStart(2,'0')}:${String(curM).padStart(2,'0')}`;
-            unavailableTimes.push(curTime);
-            if (curH === eh && curM === em) break;
-            curM += 30;
-            if (curM >= 60) { curM = 0; curH += 1; }
-          }
-        }
-      }
-    }
+    // Se houver indisponibilidade de dia inteiro, ou marcada por horário, calcula os slots bloqueados
+    const { fullDayBlocked: hasFullDayBlock, blockedTimes: unavailableTimes } = buildUnavailabilityBlocks(activeUnavs);
 
     // Filtrar horários disponíveis (remover os ocupados e os indisponíveis)
-    let availableTimes = [];
-    if (hasFullDayBlock) {
-      availableTimes = [];
-    } else {
-      availableTimes = allTimes.filter(time => !occupiedTimes.includes(time) && !unavailableTimes.includes(time));
-    }
+    const availableTimes = hasFullDayBlock
+      ? []
+      : allTimes.filter(time => !occupiedTimes.includes(time) && !unavailableTimes.includes(time));
 
     res.json({
       success: true,

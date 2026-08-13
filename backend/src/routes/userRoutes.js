@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const UserController = require('../controllers/UserController');
-const { authenticate } = require('../middlewares/auth');
+const { authenticate, requireAdmin } = require('../middlewares/auth');
 
-// Buscar todos os barbeiros (público)
-router.get('/barbers', async (req, res) => {
+// Buscar todos os barbeiros (requer login; usado na tela de agendamento)
+router.get('/barbers', authenticate, async (req, res) => {
   try {
     const barbers = await User.findByRole('barber');
     
@@ -51,8 +51,8 @@ router.put('/profile',
   UserController.updateProfile
 );
 
-// Buscar usuário por ID
-router.get('/:id', authenticate, async (req, res) => {
+// Buscar usuário por ID (dados de outra pessoa: restrito a administradores)
+router.get('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);

@@ -16,14 +16,14 @@ const { authenticate } = require('../middlewares/auth');
  * - Indisponibilidades ativas
  * - Serviços disponíveis
  */
-router.get('/:id/dashboard', BarberController.dashboard);
+router.get('/:id/dashboard', authenticate, BarberController.dashboard);
 
 /**
  * PUT /api/barber/:id/avatar
  * Atualizar avatar/foto do barbeiro
  * Body: { avatar: "data:image/png;base64,..." }
  */
-router.put('/:id/avatar', BarberController.updateAvatar);
+router.put('/:id/avatar', authenticate, BarberController.updateAvatar);
 router.get('/:id/waitlist-priority', authenticate, BarberController.getWaitlistPriority);
 router.put('/:id/waitlist-priority', authenticate, BarberController.setWaitlistPriority);
 

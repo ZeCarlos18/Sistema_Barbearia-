@@ -22,7 +22,10 @@ const WaitlistExpiryService = require('./services/WaitlistExpiryService');
 const app = express();
 
 // Middleware
-app.use(cors());
+// CORS restrito ao(s) domínio(s) do frontend, evitando que qualquer site de terceiros
+// chame a API diretamente a partir do navegador de um usuário.
+const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:3000'].filter(Boolean);
+app.use(cors({ origin: allowedOrigins }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -32,11 +35,6 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Rotas básicas
 app.get('/', (req, res) => {
   res.json({ message: 'API Barbearia funcionando!' });
-});
-
-// Rota para a página de confirmação de agendamento
-app.get('/confirm-appointment', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/confirm-appointment.html'));
 });
 
 // Rota para testar conexão com banco de dados
@@ -116,13 +114,15 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`📝 Teste a conexão: http://localhost:${PORT}/api/test-db`);
   console.log(`🔐 API de Autenticação: http://localhost:${PORT}/api/auth`);
-  console.log(`📋 Confirmar Agendamento: http://localhost:${PORT}/confirm-appointment`);
   console.log(`\n📚 Endpoints disponíveis:`);
   console.log(`  POST   /api/auth/register     - Cadastro de usuário`);
   console.log(`  POST   /api/auth/login        - Login`);
   console.log(`  POST   /api/auth/logout       - Logout (requer autenticação)`);
   console.log(`  GET    /api/auth/profile      - Perfil do usuário (requer autenticação)`);
   console.log(`  GET    /api/auth/users        - Listar todos os usuários`);
+  console.log(`  POST   /api/auth/forgot-password      - Enviar link de recuperação por e-mail`);
+  console.log(`  GET    /api/auth/reset-password/:token - Validar link de recuperação`);
+  console.log(`  POST   /api/auth/reset-password       - Definir nova senha com o token`);
   console.log(`  POST   /api/admin/barbers     - Criar barbeiro (requer autenticação)`);
   console.log(`  GET    /api/admin/barbers     - Listar barbeiros (requer autenticação)`);
   console.log(`  GET    /api/admin/barbers/:id - Detalhes barbeiro (requer autenticação)`);

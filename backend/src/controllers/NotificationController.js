@@ -51,6 +51,14 @@ class NotificationController {
     try {
       const { id } = req.params;
 
+      const notification = await Notification.findById(id);
+      if (!notification) {
+        return res.status(404).json({ success: false, message: 'Notificação não encontrada' });
+      }
+      if (String(notification.user_id) !== String(req.userId)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
       await Notification.markAsRead(id);
 
       res.json({
@@ -66,18 +74,19 @@ class NotificationController {
     try {
       const { id } = req.params;
 
-      const deleted = await Notification.delete(id);
-
-      if (!deleted) {
-        return res.status(404).json({
-          success: false,
-          message: 'Notificação não encontrada'
-        });
+      const notification = await Notification.findById(id);
+      if (!notification) {
+        return res.status(404).json({ success: false, message: 'Notificação não encontrada' });
+      }
+      if (String(notification.user_id) !== String(req.userId)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
       }
 
+      const deleted = await Notification.delete(id);
+
       res.json({
-        success: true,
-        message: 'Notificação removida'
+        success: deleted,
+        message: deleted ? 'Notificação removida' : 'Não foi possível remover a notificação'
       });
     } catch (error) {
       handleError(res, error, 'Erro ao deletar notificação:', 'NotificationController');

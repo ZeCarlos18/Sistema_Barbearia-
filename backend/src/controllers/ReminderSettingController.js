@@ -17,6 +17,10 @@ class ReminderSettingController {
 
   static async update(req, res) {
     try {
+      if (!['admin', 'barber'].includes(req.userRole)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
       const { leadTimeMinutes, channel } = req.body;
       const parsedLeadTime = Number(leadTimeMinutes);
 

@@ -10,6 +10,10 @@ class BarberController {
     try {
       const { id } = req.params;
 
+      if (req.userRole !== 'admin' && String(req.userId) !== String(id)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
       const barber = await User.findById(id);
       if (!barber || barber.role !== 'barber') {
         return res.status(404).json({ success: false, message: 'Barbeiro não encontrado' });
@@ -94,8 +98,22 @@ class BarberController {
       const { id } = req.params;
       const { avatar } = req.body;
 
+      if (req.userRole !== 'admin' && String(req.userId) !== String(id)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
+
       if (!avatar) {
         return res.status(400).json({ success: false, message: 'Avatar é obrigatório' });
+      }
+
+      if (!/^data:image\/(png|jpe?g|webp);base64,/.test(avatar)) {
+        return res.status(400).json({ success: false, message: 'Formato de imagem inválido. Envie PNG, JPG ou WEBP em base64.' });
+      }
+
+      // Limite de ~2MB para o base64 (evita payloads gigantes no banco)
+      const MAX_AVATAR_LENGTH = 2 * 1024 * 1024 * 1.4;
+      if (avatar.length > MAX_AVATAR_LENGTH) {
+        return res.status(400).json({ success: false, message: 'A imagem excede o limite de 2MB.' });
       }
 
       const conn = await pool.getConnection();
@@ -158,6 +176,10 @@ class BarberController {
   static async getWaitlistPriority(req, res) {
     try {
       const { id } = req.params;
+
+      if (req.userRole !== 'admin' && String(req.userId) !== String(id)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+      }
 
       const conn = await pool.getConnection();
       try {
