@@ -18,6 +18,7 @@ const barberRoutes = require('./routes/barberRoutes');
 const waitlistRoutes = require('./routes/waitListRoutes');
 const ReminderService = require('./services/ReminderService');
 const WaitlistExpiryService = require('./services/WaitlistExpiryService');
+const createPasswordResetsTable = require('../scripts/create_password_resets_table');
 
 const app = express();
 
@@ -130,4 +131,10 @@ app.listen(PORT, () => {
   console.log(`  POST   /api/appointments/:id/confirm - Confirmar agendamento`);
   ReminderService.startScheduler();
   WaitlistExpiryService.startScheduler();
+
+  // Garante que a tabela de recuperação de senha existe. É seguro rodar em todo
+  // boot: usa CREATE TABLE IF NOT EXISTS, então não faz nada se ela já existir.
+  createPasswordResetsTable().catch((err) => {
+    console.error('⚠️  Não foi possível verificar/criar a tabela password_resets:', err.message);
+  });
 });
