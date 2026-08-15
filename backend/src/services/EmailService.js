@@ -47,7 +47,12 @@ class EmailService {
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS
-        }
+        },
+        // Evita que o envio fique pendurado indefinidamente caso a porta esteja
+        // bloqueada ou o servidor SMTP não responda (tempos em ms).
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 15000
       });
     }
 

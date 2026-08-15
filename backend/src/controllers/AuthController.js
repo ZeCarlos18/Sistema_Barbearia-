@@ -286,17 +286,18 @@ static async register(req, res) {
       const token = await PasswordReset.create(user.id, RESET_TOKEN_EXPIRES_IN_MINUTES);
       const resetUrl = buildResetUrl(token);
 
-      try {
-        await EmailService.sendPasswordResetEmail({
-          to: user.email,
-          name: user.name,
-          resetUrl,
-          expiresInMinutes: RESET_TOKEN_EXPIRES_IN_MINUTES
-        });
-      } catch (emailError) {
-        // O e-mail falhou, mas não expomos isso ao cliente (evita enumeração de contas).
+      // Não aguardamos o envio do e-mail antes de responder: se o SMTP demorar ou
+      // travar, a requisição do usuário não pode ficar pendurada esperando por isso.
+      // Qualquer falha é apenas registrada no log (e não exposta ao cliente, para
+      // evitar enumeração de contas).
+      EmailService.sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetUrl,
+        expiresInMinutes: RESET_TOKEN_EXPIRES_IN_MINUTES
+      }).catch((emailError) => {
         console.error('[AuthController] Falha ao enviar e-mail de recuperação:', emailError);
-      }
+      });
 
       return res.status(200).json({
         success: true,
