@@ -52,7 +52,11 @@ class EmailService {
         // bloqueada ou o servidor SMTP não responda (tempos em ms).
         connectionTimeout: 15000,
         greetingTimeout: 15000,
-        socketTimeout: 15000
+        socketTimeout: 15000,
+        // Força IPv4: alguns provedores de hospedagem (ex: Render) não têm rota de
+        // saída IPv6 funcional, e o Node tenta o endereço IPv6 do Gmail primeiro,
+        // o que causa ENETUNREACH/ETIMEDOUT mesmo com a porta correta.
+        family: 4
       });
     }
 
