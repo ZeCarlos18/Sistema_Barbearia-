@@ -1,66 +1,59 @@
-const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
+const MailComposer = require('nodemailer/lib/mail-composer');
 
 /**
  * EmailService - Envio de e-mails transacionais do sistema
  *
- * Configuração via .env (padrão: Gmail SMTP):
- *   SMTP_HOST=smtp.gmail.com
- *   SMTP_PORT=465
- *   SMTP_SECURE=true
- *   SMTP_USER=seuemail@gmail.com
- *   SMTP_PASS=senha_de_app_de_16_digitos
+ * Envia via API do Gmail (HTTPS), não SMTP: alguns provedores de hospedagem
+ * (ex.: Render) bloqueiam conexões SMTP de saída, então a API é usada no lugar.
+ *
+ * Configuração via .env:
+ *   GMAIL_USER=seuemail@gmail.com
+ *   GMAIL_CLIENT_ID=...apps.googleusercontent.com
+ *   GMAIL_CLIENT_SECRET=GOCSPX-...
+ *   GMAIL_REFRESH_TOKEN=...
  *   MAIL_FROM_NAME=Barbearia
  *   MAIL_FROM_ADDRESS=seuemail@gmail.com
  *
- * Se o SMTP não estiver configurado, o serviço entra em "modo console":
+ * Se as credenciais não estiverem configuradas, o serviço entra em "modo console":
  * nenhum e-mail é enviado de verdade e o conteúdo é impresso no terminal.
  * Isso permite desenvolver sem credenciais, mas NUNCA deve ir para produção.
  */
 class EmailService {
-  static transporter = null;
+  static gmailClient = null;
 
   /**
-   * Indica se as credenciais SMTP estão presentes no ambiente
+   * Indica se as credenciais da API do Gmail estão presentes no ambiente
    * @returns {Boolean}
    */
   static isConfigured() {
-    return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+    return Boolean(
+      process.env.GMAIL_USER &&
+      process.env.GMAIL_CLIENT_ID &&
+      process.env.GMAIL_CLIENT_SECRET &&
+      process.env.GMAIL_REFRESH_TOKEN
+    );
   }
 
   /**
-   * Cria (uma única vez) o transporter do Nodemailer
-   * @returns {Object|null} transporter ou null se não configurado
+   * Cria (uma única vez) o cliente autenticado da API do Gmail
+   * @returns {Object|null} cliente gmail ou null se não configurado
    */
-  static getTransporter() {
+  static getGmailClient() {
     if (!this.isConfigured()) {
       return null;
     }
 
-    if (!this.transporter) {
-      const port = Number(process.env.SMTP_PORT || 465);
-
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port,
-        // porta 465 usa SSL direto; 587 usa STARTTLS
-        secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        },
-        // Evita que o envio fique pendurado indefinidamente caso a porta esteja
-        // bloqueada ou o servidor SMTP não responda (tempos em ms).
-        connectionTimeout: 15000,
-        greetingTimeout: 15000,
-        socketTimeout: 15000,
-        // Força IPv4: alguns provedores de hospedagem (ex: Render) não têm rota de
-        // saída IPv6 funcional, e o Node tenta o endereço IPv6 do Gmail primeiro,
-        // o que causa ENETUNREACH/ETIMEDOUT mesmo com a porta correta.
-        family: 4
-      });
+    if (!this.gmailClient) {
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GMAIL_CLIENT_ID,
+        process.env.GMAIL_CLIENT_SECRET
+      );
+      oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+      this.gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
     }
 
-    return this.transporter;
+    return this.gmailClient;
   }
 
   /**
@@ -69,8 +62,37 @@ class EmailService {
    */
   static getFrom() {
     const name = process.env.MAIL_FROM_NAME || 'Barbearia';
-    const address = process.env.MAIL_FROM_ADDRESS || process.env.SMTP_USER;
+    const address = process.env.MAIL_FROM_ADDRESS || process.env.GMAIL_USER;
     return `"${name}" <${address}>`;
+  }
+
+  /**
+   * Monta a mensagem MIME (assunto, texto e HTML) e retorna em base64url,
+   * formato exigido pela API do Gmail.
+   * @returns {Promise<String>}
+   */
+  static buildRawMessage({ to, subject, html, text }) {
+    return new Promise((resolve, reject) => {
+      const mail = new MailComposer({
+        from: this.getFrom(),
+        to,
+        subject,
+        text,
+        html
+      });
+
+      mail.compile().build((error, message) => {
+        if (error) return reject(error);
+
+        const raw = message
+          .toString('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+        resolve(raw);
+      });
+    });
   }
 
   /**
@@ -79,24 +101,24 @@ class EmailService {
    * @returns {Boolean} true quando enviado (ou logado no modo console)
    */
   static async send({ to, subject, html, text }) {
-    const transporter = this.getTransporter();
+    const gmail = this.getGmailClient();
 
-    if (!transporter) {
-      console.warn('\n⚠️  [EmailService] SMTP não configurado. E-mail NÃO foi enviado.');
+    if (!gmail) {
+      console.warn('\n⚠️  [EmailService] API do Gmail não configurada. E-mail NÃO foi enviado.');
       console.warn('   Para: ', to);
       console.warn('   Assunto: ', subject);
       console.warn('   Conteúdo:\n', text || html);
-      console.warn('   Configure SMTP_HOST, SMTP_USER e SMTP_PASS no .env\n');
+      console.warn('   Configure GMAIL_USER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET e GMAIL_REFRESH_TOKEN no .env\n');
       return false;
     }
 
-    await transporter.sendMail({
-      from: this.getFrom(),
-      to,
-      subject,
-      text,
-      html
-    });
+    const raw = await this.buildRawMessage({ to, subject, html, text });
+
+    await gmail.users.messages.send(
+      { userId: 'me', requestBody: { raw } },
+      // Evita que a chamada fique pendurada indefinidamente em caso de instabilidade.
+      { timeout: 15000 }
+    );
 
     return true;
   }
